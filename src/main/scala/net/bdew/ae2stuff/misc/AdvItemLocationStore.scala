@@ -9,10 +9,12 @@
 
 package net.bdew.ae2stuff.misc
 
+import net.bdew.ae2stuff.machines.wireless.TileWireless
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.nbt.NBT
 import net.minecraft.item.{Item, ItemStack}
-import net.minecraft.nbt.{NBTBase, NBTTagCompound}
+import net.minecraft.nbt.{NBTBase, NBTTagCompound, NBTTagList}
+import net.minecraft.world.World
 
 trait AdvItemLocationStore extends Item {
 
@@ -78,6 +80,38 @@ trait AdvItemLocationStore extends Item {
       stack.getTagCompound.getTagList("loc", COMPOUND_TAG).getCompoundTagAt(0)
     )
 
+  private class TileWirelessIterator(stack: ItemStack, world: World)
+      extends Iterator[TileWireless] {
+    private val tags: NBTTagList =
+      stack.getTagCompound.getTagList("loc", COMPOUND_TAG)
+    private val tag_amount: Int = tags.tagCount()
+    private var i = 0
+    private var wireless: TileWireless = null
+
+    override def hasNext: Boolean = {
+      var block: BlockRef = null
+
+      while (wireless != null && i < tag_amount) {
+        block = BlockRef.fromNBT(tags.getCompoundTagAt(i))
+        i = i + 1
+        wireless = block.getTile[TileWireless](world).get
+        if (wireless != null) {
+          return true
+        }
+      }
+      false
+    }
+    override def next(): TileWireless = {
+      val block = wireless
+      wireless = null
+      block
+    }
+  }
+
+  def iterOnLocation(stack: ItemStack, world: World): TileWirelessIterator = {
+    new TileWirelessIterator(stack, world)
+  }
+
   def getDimension(stack: ItemStack): Int =
     stack.getTagCompound.getInteger("dim")
 
@@ -108,27 +142,42 @@ trait AdvItemLocationStore extends Item {
     null
   }
 
-  def getMode(stack: ItemStack): Integer = {
+  /** Retrieves the mode state of the given ItemStack. If the mode is not
+    * previously set, initializes it to a default value of `false`.
+    *
+    * @param stack
+    *   the ItemStack from which to retrieve or initialize the mode state
+    * @return
+    *   the current mode state of the ItemStack as a Boolean
+    */
+  def getMode(stack: ItemStack): Boolean = {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
-    if (tag.hasKey("mode")) {
-      tag.getInteger("mode")
-    } else {
-      tag.setInteger("mode", MODE_QUEUING)
-      MODE_QUEUING
+    if (tag.hasKey("mode_binding")) {
+      return tag.getBoolean("mode_binding")
     }
+    tag.setBoolean("mode_binding", false)
+    false
   }
 
-  def toggleMode(stack: ItemStack): Integer = {
+  def toggleMode(stack: ItemStack): Boolean = {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
-    if (tag.hasKey("mode")) {
-      val mode = tag.getInteger("mode")
-      tag.setInteger("mode", (mode + 1) % 2)
-      tag.getInteger("mode")
+    if (tag.hasKey("mode_binding")) {
+      tag.setBoolean("mode_binding", !tag.getBoolean("mode_binding"))
     } else {
-      tag.setInteger("mode", MODE_QUEUING)
-      MODE_QUEUING
+      tag.setBoolean("mode_binding", false)
     }
+    tag.getBoolean("mode_binding")
   }
-}
+  def toggleLineMode(stack: ItemStack): Boolean = {
+    if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
+    val tag = stack.getTagCompound
+    if (tag.hasKey("lineMode")) {
+      tag.setBoolean("lineMode", !tag.getBoolean("lineMode"))
+    } else {
+      tag.setBoolean("lineMode", false)
+    }
+    tag.getBoolean("lineMode")
+  }
+};
