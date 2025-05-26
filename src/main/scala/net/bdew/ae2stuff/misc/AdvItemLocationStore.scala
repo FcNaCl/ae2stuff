@@ -29,7 +29,7 @@ trait AdvItemLocationStore extends Item {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
     if (tag.hasKey("dim") && tag.getInteger("dim") != dimension) {
-      false
+      return false
     }
     val locList = tag.getTagList("loc", COMPOUND_TAG)
     for (i <- 0 until locList.tagCount()) {
@@ -89,20 +89,12 @@ trait AdvItemLocationStore extends Item {
     private var canNext: Boolean = false
 
     def hasNext: Boolean = {
-      if (canNext) {
-        return true
-      }
-
-      while (wireless.isEmpty && tags.tagCount() > 0) {
+      while (!canNext && tags.tagCount() > 0) {
         wireless = BlockRef
           .fromNBT(tags.removeTag(0).asInstanceOf[NBTTagCompound])
           .getTile[TileWireless](world)
         wireless match {
-          case None =>
-            removeCurrent()
-          case Some(w) if w == target =>
-            removeCurrent()
-          case Some(_) =>
+          case Some(w) if w != target =>
             canNext = true
             return true
         }
