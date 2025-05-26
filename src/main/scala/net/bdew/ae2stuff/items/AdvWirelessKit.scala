@@ -253,39 +253,49 @@ object AdvWirelessKit
     false
   }
 
-  private def bindWireless(
-      target: TileWireless,
+  private def checkTargetValidity(
       stack: ItemStack,
+      target: TileWireless,
       player: EntityPlayer,
-      world: World
+      pid: Integer
   ): Boolean = {
-    val pid = Security.getPlayerId(player)
-
     if (!hasLocation(stack)) {
       player.addChatMessage(
         L("ae2stuff.wireless.advtool.noconnectors").setColor(Color.RED)
       )
-      return true
+      return false
     }
 
-    if (getDimension(stack) != world.provider.dimensionId) {
+    if (getDimension(stack) != player.worldObj.provider.dimensionId) {
       // Different dimensions - error out
       player.addChatMessage(
         L("ae2stuff.wireless.tool.dimension").setColor(Color.RED)
       )
-      return true
+      return false
     }
 
     if (!checkSecurity(target, player, pid)) {
-      return true
+      return false
     }
 
     if (target.connectionsList.length >= 32) {
       player.addChatMessage(
         L("ae2stuff.wireless.tool.targethubfull").setColor(Color.RED)
       )
-      return true
+      return false
     }
+    true
+  }
+
+  private def bindWireless(
+      target: TileWireless,
+      stack: ItemStack,
+      player: EntityPlayer,
+      world: World
+  ): Boolean = {
+
+    val pid = Security.getPlayerId(player)
+    if (!checkTargetValidity(stack, target, player, pid)) return true
 
     val ctrlIsDown = AE2Stuff.keybindLCtrl.isKeyDown(player)
     val once = !(ctrlIsDown && target.isHub)
@@ -307,6 +317,52 @@ object AdvWirelessKit
 
       if (once)
         return true
+    }
+    true
+  }
+
+  private def bindWirelessLine(
+      target: TileWireless,
+      stack: ItemStack,
+      player: EntityPlayer,
+      world: World
+  ): Boolean = {
+    var var_target = target
+
+    val pid = Security.getPlayerId(player)
+    if (!checkTargetValidity(stack, var_target, player, pid)) return true
+
+    var x: Integer = var_target.xCoord
+    var y: Integer = var_target.yCoord
+    var z: Integer = var_target.zCoord
+
+    val direction = FindPlayerLookDirection(player)
+
+    val iterator = iterOnValidLocation(stack, world, var_target)
+    iterator.foreach { tile =>
+      // And check that the player can modify it too
+      if (!checkSecurity(tile, player, pid)) {
+        return true
+      }
+
+      if (tile.isHub && var_target.isHub) {
+        player.addChatMessage(
+          L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
+        )
+        return true
+      }
+
+      doBind(tile, var_target, player, pid)
+      direction match {
+        case ForgeDirection.UP    => y = y + 1
+        case ForgeDirection.DOWN  => y = y - 1
+        case ForgeDirection.EAST  => x = x + 1
+        case ForgeDirection.WEST  => x = x - 1
+        case ForgeDirection.NORTH => z = z + 1
+        case ForgeDirection.SOUTH => z = z - 1
+        case _                    => return true
+      }
+      var_target = BlockRef(x, y, z).getTile[TileWireless](world).getOrElse(return true)
     }
     true
   }
@@ -366,7 +422,6 @@ object AdvWirelessKit
     } else {
       bindWireless(tile, stack, player, world)
     }
-    true
   }
 
   override def addInformation(
