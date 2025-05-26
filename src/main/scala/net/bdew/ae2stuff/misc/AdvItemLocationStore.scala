@@ -98,11 +98,7 @@ trait AdvItemLocationStore extends Item {
           .fromNBT(tags.removeTag(0).asInstanceOf[NBTTagCompound])
           .getTile[TileWireless](world)
         wireless match {
-          case None =>
-            removeCurrent()
-          case Some(w) if w == target =>
-            removeCurrent()
-          case Some(_) =>
+          case Some(w) if w != target =>
             canNext = true
             return true
         }

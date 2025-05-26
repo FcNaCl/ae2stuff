@@ -300,7 +300,7 @@ object AdvWirelessKit
         player.addChatMessage(
           L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
         )
-        return false
+        return true
       }
 
       doBind(tile, target, player, pid)
@@ -364,7 +364,7 @@ object AdvWirelessKit
     if (getMode(stack) == MODE_QUEUING) {
       appEndQueue(tile, stack, pos, player, world)
     } else {
-      bindWireless(tile, stack, pos, player, world)
+      bindWireless(tile, stack, player, world)
     }
     true
   }
