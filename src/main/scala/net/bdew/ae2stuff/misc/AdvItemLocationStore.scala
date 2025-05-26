@@ -18,8 +18,6 @@ import net.minecraft.world.World
 
 trait AdvItemLocationStore extends Item {
 
-  import net.bdew.ae2stuff.items.AdvWirelessKit.MODE_QUEUING
-
   private val COMPOUND_TAG = NBTBase.NBTTypes.indexOf("COMPOUND")
 
   def addLocation(
@@ -80,36 +78,59 @@ trait AdvItemLocationStore extends Item {
       stack.getTagCompound.getTagList("loc", COMPOUND_TAG).getCompoundTagAt(0)
     )
 
-  private class TileWirelessIterator(stack: ItemStack, world: World)
-      extends Iterator[TileWireless] {
-    private val tags: NBTTagList =
-      stack.getTagCompound.getTagList("loc", COMPOUND_TAG)
-    private val tag_amount: Int = tags.tagCount()
-    private var i = 0
-    private var wireless: TileWireless = null
+  private[misc] class TileWirelessIterator(stack: ItemStack, world: World,target: TileWireless, once: Boolean) {
+    private val tags: NBTTagList = stack.getTagCompound.getTagList("loc", COMPOUND_TAG)
+    private var i = -1 // Start before the first element
+    private var wireless: Option[TileWireless] = None
+    private var canNext: Boolean = false
+    private var doOnce: Boolean = false
 
-    override def hasNext: Boolean = {
-      var block: BlockRef = null
+    def hasNext: Boolean = {
+      if (canNext) {
+        return true
+      }
 
-      while (wireless != null && i < tag_amount) {
-        block = BlockRef.fromNBT(tags.getCompoundTagAt(i))
+      if (once && doOnce) {
+        return false
+      }
+
+      while (wireless != null && i < tags.tagCount() && tags.tagCount() > 0) {
         i = i + 1
-        wireless = block.getTile[TileWireless](world).get
-        if (wireless != null) {
-          return true
+        wireless = BlockRef.fromNBT(tags.getCompoundTagAt(i)).getTile[TileWireless](world)
+        wireless match {
+          case None =>
+            removeCurrent()
+          case Some(w) if w == target =>
+            removeCurrent()
+          case Some(_) =>
+            canNext = true
+            doOnce = true
+            return true
         }
       }
       false
     }
-    override def next(): TileWireless = {
-      val block = wireless
-      wireless = null
-      block
+
+    def next(): TileWireless = {
+      if (!canNext) {
+        throw new NoSuchElementException("No more locations available")
+      }
+      canNext = false
+      wireless.get
     }
+
+    def removeCurrent(): Unit = {
+      if (i < 0 || i > tags.tagCount()) {
+        throw new IndexOutOfBoundsException("Index out of bounds for remove operation")
+      }
+      tags.removeTag(i)
+      i = i - 1 // Adjust index after removal
+    }
+    def foreach(f: TileWireless => Unit): Unit = { while (hasNext) f(next()) }
   }
 
-  def iterOnLocation(stack: ItemStack, world: World): TileWirelessIterator = {
-    new TileWirelessIterator(stack, world)
+  def iterOnValidLocation(stack: ItemStack, world: World, target: TileWireless, once: Boolean): TileWirelessIterator = {
+    new TileWirelessIterator(stack, world, target, once)
   }
 
   def getDimension(stack: ItemStack): Int =
