@@ -78,25 +78,25 @@ trait AdvItemLocationStore extends Item {
       stack.getTagCompound.getTagList("loc", COMPOUND_TAG).getCompoundTagAt(0)
     )
 
-  private[misc] class TileWirelessIterator(stack: ItemStack, world: World,target: TileWireless, once: Boolean) {
-    private val tags: NBTTagList = stack.getTagCompound.getTagList("loc", COMPOUND_TAG)
-    private var i = -1 // Start before the first element
+  private[misc] class TileWirelessIterator(
+      stack: ItemStack,
+      world: World,
+      target: TileWireless
+  ) {
+    private val tags: NBTTagList =
+      stack.getTagCompound.getTagList("loc", COMPOUND_TAG)
     private var wireless: Option[TileWireless] = None
     private var canNext: Boolean = false
-    private var doOnce: Boolean = false
 
     def hasNext: Boolean = {
       if (canNext) {
         return true
       }
 
-      if (once && doOnce) {
-        return false
-      }
-
-      while (wireless != null && i < tags.tagCount() && tags.tagCount() > 0) {
-        i = i + 1
-        wireless = BlockRef.fromNBT(tags.getCompoundTagAt(i)).getTile[TileWireless](world)
+      while (wireless.isEmpty && tags.tagCount() > 0) {
+        wireless = BlockRef
+          .fromNBT(tags.removeTag(0).asInstanceOf[NBTTagCompound])
+          .getTile[TileWireless](world)
         wireless match {
           case None =>
             removeCurrent()
@@ -104,7 +104,6 @@ trait AdvItemLocationStore extends Item {
             removeCurrent()
           case Some(_) =>
             canNext = true
-            doOnce = true
             return true
         }
       }
@@ -112,25 +111,21 @@ trait AdvItemLocationStore extends Item {
     }
 
     def next(): TileWireless = {
-      if (!canNext) {
+      if (!canNext && !hasNext) {
         throw new NoSuchElementException("No more locations available")
       }
       canNext = false
       wireless.get
     }
-
-    def removeCurrent(): Unit = {
-      if (i < 0 || i > tags.tagCount()) {
-        throw new IndexOutOfBoundsException("Index out of bounds for remove operation")
-      }
-      tags.removeTag(i)
-      i = i - 1 // Adjust index after removal
-    }
     def foreach(f: TileWireless => Unit): Unit = { while (hasNext) f(next()) }
   }
 
-  def iterOnValidLocation(stack: ItemStack, world: World, target: TileWireless, once: Boolean): TileWirelessIterator = {
-    new TileWirelessIterator(stack, world, target, once)
+  def iterOnValidLocation(
+      stack: ItemStack,
+      world: World,
+      target: TileWireless
+  ): TileWirelessIterator = {
+    new TileWirelessIterator(stack, world, target)
   }
 
   def getDimension(stack: ItemStack): Int =
