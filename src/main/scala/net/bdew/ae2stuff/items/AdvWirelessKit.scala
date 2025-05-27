@@ -366,7 +366,7 @@ object AdvWirelessKit
         case _                    => return true
       }
       var_target =
-        BlockRef(x, y, z).getTile[TileWireless](world).getOrElse({player.addChatMessage(L("getTile failed and returned none").setColor(Color.RED)); return true})
+        BlockRef(x, y, z).getTile[TileWireless](world).getOrElse(return true)
     }
     true
   }
