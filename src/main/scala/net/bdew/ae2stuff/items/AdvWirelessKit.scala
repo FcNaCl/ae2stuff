@@ -327,19 +327,20 @@ object AdvWirelessKit
       player: EntityPlayer,
       world: World
   ): Boolean = {
-    var var_target = target
+    var var_target: TileWireless = target
 
     val pid = Security.getPlayerId(player)
     if (!checkTargetValidity(stack, var_target, player, pid)) return true
 
-    var x: Integer = var_target.xCoord
-    var y: Integer = var_target.yCoord
-    var z: Integer = var_target.zCoord
+    var x: Int = var_target.xCoord
+    var y: Int = var_target.yCoord
+    var z: Int = var_target.zCoord
 
     val direction = FindPlayerLookDirection(player)
 
     val iterator = iterOnValidLocation(stack, world, var_target)
     iterator.foreach { tile =>
+
       // And check that the player can modify it too
       if (!checkSecurity(tile, player, pid)) {
         return true
@@ -352,17 +353,20 @@ object AdvWirelessKit
         return true
       }
 
+      // bind the selected wireless in queue and the target
       doBind(tile, var_target, player, pid)
+
       direction match {
         case ForgeDirection.UP    => y = y + 1
         case ForgeDirection.DOWN  => y = y - 1
-        case ForgeDirection.EAST  => x = x + 1
-        case ForgeDirection.WEST  => x = x - 1
-        case ForgeDirection.NORTH => z = z + 1
-        case ForgeDirection.SOUTH => z = z - 1
+        case ForgeDirection.EAST  => x = x - 1
+        case ForgeDirection.WEST  => x = x + 1
+        case ForgeDirection.NORTH => z = z - 1
+        case ForgeDirection.SOUTH => z = z + 1
         case _                    => return true
       }
-      var_target = BlockRef(x, y, z).getTile[TileWireless](world).getOrElse(return true)
+      var_target =
+        BlockRef(x, y, z).getTile[TileWireless](world).getOrElse({player.addChatMessage(L("getTile failed and returned none").setColor(Color.RED)); return true})
     }
     true
   }
@@ -420,7 +424,8 @@ object AdvWirelessKit
     if (getMode(stack) == MODE_QUEUING) {
       appEndQueue(tile, stack, pos, player, world)
     } else {
-      bindWireless(tile, stack, player, world)
+      //bindWireless(tile, stack, player, world)
+      bindWirelessLine(tile, stack, player, world)
     }
   }
 
