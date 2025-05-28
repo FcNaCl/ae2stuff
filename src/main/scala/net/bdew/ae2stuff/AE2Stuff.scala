@@ -26,6 +26,7 @@ import net.bdew.ae2stuff.misc.{Icons, MouseEventHandler, OverlayRenderHandler}
 import net.bdew.ae2stuff.network.NetHandler
 import net.bdew.lib.Event
 import net.bdew.lib.gui.GuiHandler
+import net.bdew.lib.helpers.ChatHelper.{Color, L, pimpIChatComponent}
 import net.minecraft.entity.player.EntityPlayerMP
 import org.apache.logging.log4j.Logger
 import org.lwjgl.input.Keyboard
@@ -68,8 +69,15 @@ object AE2Stuff {
         for {
           stack <- Option(player.getCurrentEquippedItem)
           item <- Some(stack.getItem) if item == AdvWirelessKit
-        } toggleLineMode(stack)
-
+        } player.addChatMessage(
+          L(
+            if (toggleLineMode(stack)) {
+              "ae2stuff.wireless.advtool.lineModeEnable"
+            } else {
+              "ae2stuff.wireless.advtool.lineModeDisable"
+            }
+          ).setColor(Color.GREEN)
+        )
       }
     }
   }

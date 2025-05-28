@@ -407,17 +407,6 @@ object AdvWirelessKit
   ): ItemStack = {
     if (world.isRemote) return stack
 
-    if (AE2Stuff.keybindLineMode.isKeyDown(player)) {
-      player.addChatMessage(
-        L(
-          toggleLineMode(stack) match {
-            case true => "ae2stuff.wireless.advtool.lineModeEnable"
-            case false => "ae2stuff.wireless.advtool.lineModeDisable"
-          }
-        ).setColor(Color.GREEN)
-      )
-    }
-
     if (!player.isSneaking) {
       return stack
     }
