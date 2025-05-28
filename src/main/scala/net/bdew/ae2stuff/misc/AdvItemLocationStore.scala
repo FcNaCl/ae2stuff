@@ -182,11 +182,7 @@ trait AdvItemLocationStore extends Item {
   private def getLineMode(stack: ItemStack): Boolean = {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
-    if (tag.hasKey("lineMode")) {
-      return tag.getBoolean("lineMode")
-    }
-    tag.setBoolean("lineMode", false)
-    false
+    tag.hasKey("ench")
   }
 
   def toggleMode(stack: ItemStack): Boolean = {
@@ -203,11 +199,10 @@ trait AdvItemLocationStore extends Item {
   def toggleLineMode(stack: ItemStack): Boolean = {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
-    if (tag.hasKey("lineMode")) {
-      tag.setBoolean("lineMode", !tag.getBoolean("lineMode"))
-    } else {
-      tag.setBoolean("lineMode", false)
-    }
-    tag.getBoolean("lineMode")
+    if (!tag.hasKey("ench"))
+      tag.setTag("ench", new NBTTagList)
+    else
+      tag.removeTag("ench")
+    tag.hasKey("ench")
   }
 };

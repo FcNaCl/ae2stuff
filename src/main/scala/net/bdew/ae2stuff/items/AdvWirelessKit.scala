@@ -11,6 +11,8 @@ package net.bdew.ae2stuff.items
 
 import appeng.api.config.SecurityPermissions
 import appeng.api.exceptions.FailedConnection
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.gameevent.TickEvent
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.Security
@@ -58,6 +60,7 @@ object AdvWirelessKit
         bindIcon
     }
   }
+
 
   /** Determines the direction the player is looking based on their view vector.
     * The method calculates the dominant axis (X, Y, or Z) based on the view
@@ -192,7 +195,7 @@ object AdvWirelessKit
       world: World
   ): Boolean = {
 
-    val ctrlIsDown = AE2Stuff.keybindLCtrl.isKeyDown(player)
+    val ctrlIsDown = AE2Stuff.keybindModeSwitch.isKeyDown(player)
     val freeConnexions =
       if (ctrlIsDown && tile.isHub) 32 - tile.connectionsList.length else 1
     if (!checkHubAvailability(player, tile)) return false
@@ -324,7 +327,7 @@ object AdvWirelessKit
     val pid = Security.getPlayerId(player)
     if (!checkTargetValidity(stack, target, player, pid)) return true
 
-    val ctrlIsDown = AE2Stuff.keybindLCtrl.isKeyDown(player)
+    val ctrlIsDown = AE2Stuff.keybindModeSwitch.isKeyDown(player)
     val once = !(ctrlIsDown && target.isHub)
     val iterator = iterOnValidLocation(stack, world, target)
     iterator.foreach { tile =>
@@ -402,11 +405,25 @@ object AdvWirelessKit
       world: World,
       player: EntityPlayer
   ): ItemStack = {
-    if (world.isRemote || !player.isSneaking) {
+    if (world.isRemote) return stack
+
+    if (AE2Stuff.keybindLineMode.isKeyDown(player)) {
+      player.addChatMessage(
+        L(
+          toggleLineMode(stack) match {
+            case true => "ae2stuff.wireless.advtool.lineModeEnable"
+            case false => "ae2stuff.wireless.advtool.lineModeDisable"
+          }
+        ).setColor(Color.GREEN)
+      )
+    }
+
+    if (!player.isSneaking) {
       return stack
     }
+
     // Implies the player is both sneaking and pressing ctrl
-    if (AE2Stuff.keybindLCtrl.isKeyDown(player)) {
+    if (AE2Stuff.keybindModeSwitch.isKeyDown(player)) {
       clearQueue(stack, player)
       return stack
     }
@@ -431,7 +448,7 @@ object AdvWirelessKit
     if (world.isRemote) return true
 
     if (player.isSneaking) {
-      if (AE2Stuff.keybindLCtrl.isKeyDown(player)) {
+      if (AE2Stuff.keybindModeSwitch.isKeyDown(player)) {
         return clearQueue(stack, player)
       }
       toggleMode(stack)
@@ -496,7 +513,13 @@ object AdvWirelessKit
             }
         }
         list.add(
-          Misc.toLocal("ae2stuff.wireless.tooltips.advtool.hubqols.queueing")
+          I18n.format(
+            "ae2stuff.wireless.tooltips.advtool.hubqols.queueing",
+            Minecraft.getMinecraft.gameSettings.keyBindings
+              .find(_.getKeyDescription == AE2Stuff.keybindModeId)
+              .map(kb => Keyboard.getKeyName(kb.getKeyCode))
+              .getOrElse("NONE")
+          )
         )
 
       case _: WirelessKitModes.BINDING =>
@@ -513,7 +536,13 @@ object AdvWirelessKit
             }
         }
         list.add(
-          Misc.toLocal("ae2stuff.wireless.tooltips.advtool.hubqols.binding")
+          I18n.format(
+            "ae2stuff.wireless.tooltips.advtool.hubqols.binding",
+            Minecraft.getMinecraft.gameSettings.keyBindings
+              .find(_.getKeyDescription == AE2Stuff.keybindModeId)
+              .map(kb => Keyboard.getKeyName(kb.getKeyCode))
+              .getOrElse("NONE")
+          )
         )
       case _ =>
     }

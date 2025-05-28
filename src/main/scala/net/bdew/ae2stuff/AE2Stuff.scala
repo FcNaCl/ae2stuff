@@ -9,7 +9,7 @@
 
 package net.bdew.ae2stuff
 
-import com.gtnewhorizon.gtnhlib.keybind.SyncedKeybind
+import com.gtnewhorizon.gtnhlib.keybind.{IKeyPressedListener, SyncedKeybind}
 
 import java.io.File
 import cpw.mods.fml.common.Mod
@@ -18,15 +18,15 @@ import cpw.mods.fml.common.event._
 import cpw.mods.fml.common.network.NetworkRegistry
 import cpw.mods.fml.relauncher.Side
 import net.bdew.ae2stuff.compat.WrenchRegistry
-import net.bdew.ae2stuff.items.visualiser.{
-  VisualiserOverlayRender,
-  VisualiserPlayerTracker
-}
+import net.bdew.ae2stuff.items.AdvWirelessKit
+import net.bdew.ae2stuff.items.AdvWirelessKit.toggleLineMode
+import net.bdew.ae2stuff.items.visualiser.{VisualiserOverlayRender, VisualiserPlayerTracker}
 import net.bdew.ae2stuff.machines.wireless.WirelessOverlayRender
 import net.bdew.ae2stuff.misc.{Icons, MouseEventHandler, OverlayRenderHandler}
 import net.bdew.ae2stuff.network.NetHandler
 import net.bdew.lib.Event
 import net.bdew.lib.gui.GuiHandler
+import net.minecraft.entity.player.EntityPlayerMP
 import org.apache.logging.log4j.Logger
 import org.lwjgl.input.Keyboard
 
@@ -49,12 +49,33 @@ object AE2Stuff {
 
   val guiHandler = new GuiHandler
   val keybindModeId = "ae2stuff.key.mode"
+  val keybindLineModeId = "ae2stuff.key.lineMode"
   val keybindModeSwitch = SyncedKeybind.createConfigurable(
     keybindModeId,
     "itemGroup.bdew.ae2stuff",
     Keyboard.CHAR_NONE
   )
-  val keybindLineMode: SyncedKeybind = SyncedKeybind.create(Keyboard.CHAR_NONE)
+
+  val keybindLineMode: SyncedKeybind = SyncedKeybind.createConfigurable(
+    keybindLineModeId,
+    "itemGroup.bdew.ae2stuff",
+    Keyboard.CHAR_NONE
+  )
+
+  private object callback extends IKeyPressedListener {
+    def onKeyPressed(player: EntityPlayerMP, keyPressed: SyncedKeybind) = {
+      if (AE2Stuff.keybindLineMode.isKeyDown(player)) {
+        for {
+          stack <- Option(player.getCurrentEquippedItem)
+          item <- Some(stack.getItem) if item == AdvWirelessKit
+        } toggleLineMode(stack)
+
+      }
+    }
+  }
+
+
+  keybindLineMode.registerGlobalListener(callback)
 
   def logDebug(msg: String, args: Any*) = log.debug(msg.format(args: _*))
   def logInfo(msg: String, args: Any*) = log.info(msg.format(args: _*))
