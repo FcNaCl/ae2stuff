@@ -14,7 +14,7 @@ import appeng.api.exceptions.FailedConnection
 import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.Security
 import net.bdew.ae2stuff.machines.wireless.{BlockWireless, TileWireless}
-import net.bdew.ae2stuff.misc.AdvItemLocationStore
+import net.bdew.ae2stuff.misc.{AdvItemLocationStore, WirelessKitModes}
 import net.bdew.lib.Misc
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.items.SimpleItem
@@ -31,9 +31,6 @@ object AdvWirelessKit
     extends SimpleItem("AdvWirelessKit")
     with AdvItemLocationStore {
   setMaxStackSize(1)
-
-  private val MODE_QUEUING = false;
-  private val MODE_BINDING = true;
 
   /** Determines the direction the player is looking based on their view vector.
     * The method calculates the dominant axis (X, Y, or Z) based on the view
@@ -113,18 +110,17 @@ object AdvWirelessKit
   }
 
   private def displayCurrentMode(stack: ItemStack, player: EntityPlayer) = {
-    if (getMode(stack)) {
-      player.addChatMessage(
-        L("ae2stuff.wireless.advtool.binding.activated").setColor(
-          Color.GREEN
+    getMode(stack) match {
+      case _: WirelessKitModes.QUEUING =>
+        player.addChatMessage(
+          L("ae2stuff.wireless.advtool.queueing.activated").setColor(
+            Color.GREEN
+          )
         )
-      )
-    } else {
-      player.addChatMessage(
-        L("ae2stuff.wireless.advtool.queueing.activated").setColor(
-          Color.GREEN
+      case _: WirelessKitModes.BINDING =>
+        player.addChatMessage(
+          L("ae2stuff.wireless.advtool.binding.activated").setColor(Color.GREEN)
         )
-      )
     }
   }
 
@@ -207,6 +203,10 @@ object AdvWirelessKit
       L("ae2stuff.wireless.advtool.queuederror").setColor(Color.RED)
     )
     false
+  }
+
+  def appEndQueueLine(): Boolean = {
+    return false // No line queueing
   }
 
   private def doBind(
@@ -340,7 +340,6 @@ object AdvWirelessKit
 
     val iterator = iterOnValidLocation(stack, world, var_target)
     iterator.foreach { tile =>
-
       // And check that the player can modify it too
       if (!checkSecurity(tile, player, pid)) {
         return true
@@ -421,11 +420,16 @@ object AdvWirelessKit
     // Check that the player can modify the network
     if (!checkSecurity(tile, player, pid)) return false
 
-    if (getMode(stack) == MODE_QUEUING) {
-      appEndQueue(tile, stack, pos, player, world)
-    } else {
-      //bindWireless(tile, stack, player, world)
-      bindWirelessLine(tile, stack, player, world)
+    getMode(stack) match {
+      case WirelessKitModes.MODE_BINDING =>
+        bindWireless(tile, stack, player, world)
+      case WirelessKitModes.MODE_BINDING_LINE =>
+        bindWirelessLine(tile, stack, player, world)
+      case WirelessKitModes.MODE_QUEUING =>
+        appEndQueue(tile, stack, pos, player, world)
+      case WirelessKitModes.MODE_QUEUING_LINE =>
+        appEndQueueLine()
+      case _ => true // Should not happen
     }
   }
 
@@ -447,34 +451,44 @@ object AdvWirelessKit
         )
       )
     }
-    if (getMode(stack) == MODE_QUEUING) {
-      list.add(Misc.toLocal("ae2stuff.wireless.advtool.queueing"))
-      if (getLocations(stack).tagCount() == 0) {
-        list.add(Misc.toLocal("ae2stuff.wireless.advtool.queueing.empty"))
-      } else {
-        list.add(Misc.toLocal("ae2stuff.wireless.advtool.queueing.notempty"))
-        for (i <- 0 until getLocations(stack).tagCount()) {
-          val loc = BlockRef.fromNBT(getLocations(stack).getCompoundTagAt(i))
-          list.add(loc.x + "," + loc.y + "," + loc.z)
+
+    getMode(stack) match {
+      case _: WirelessKitModes.QUEUING =>
+        list.add(Misc.toLocal("ae2stuff.wireless.advtool.queueing"))
+        getLocations(stack).tagCount() match {
+          case 0 =>
+            list.add(Misc.toLocal("ae2stuff.wireless.advtool.queueing.empty"))
+          case _ =>
+            list.add(
+              Misc.toLocal("ae2stuff.wireless.advtool.queueing.notempty")
+            )
+            for (i <- 0 until getLocations(stack).tagCount()) {
+              val loc =
+                BlockRef.fromNBT(getLocations(stack).getCompoundTagAt(i))
+              list.add(loc.x + "," + loc.y + "," + loc.z)
+            }
         }
-      }
-      list.add(
-        Misc.toLocal("ae2stuff.wireless.tooltips.advtool.hubqols.queueing")
-      )
-    } else if (getMode(stack) == MODE_BINDING) {
-      list.add(Misc.toLocal("ae2stuff.wireless.advtool.binding"))
-      if (getLocations(stack).tagCount() == 0) {
-        list.add(Misc.toLocal("ae2stuff.wireless.advtool.binding.empty"))
-      } else {
-        list.add(Misc.toLocal("ae2stuff.wireless.advtool.binding.notempty"))
-        for (i <- 0 until getLocations(stack).tagCount()) {
-          val loc = BlockRef.fromNBT(getLocations(stack).getCompoundTagAt(i))
-          list.add(loc.x + "," + loc.y + "," + loc.z)
+        list.add(
+          Misc.toLocal("ae2stuff.wireless.tooltips.advtool.hubqols.queueing")
+        )
+
+      case _: WirelessKitModes.BINDING =>
+        list.add(Misc.toLocal("ae2stuff.wireless.advtool.binding"))
+        getLocations(stack).tagCount() match {
+          case 0 =>
+            list.add(Misc.toLocal("ae2stuff.wireless.advtool.binding.empty"))
+          case _ =>
+            list.add(Misc.toLocal("ae2stuff.wireless.advtool.binding.notempty"))
+            for (i <- 0 until getLocations(stack).tagCount()) {
+              val loc =
+                BlockRef.fromNBT(getLocations(stack).getCompoundTagAt(i))
+              list.add(loc.x + "," + loc.y + "," + loc.z)
+            }
         }
-      }
-      list.add(
-        Misc.toLocal("ae2stuff.wireless.tooltips.advtool.hubqols.binding")
-      )
+        list.add(
+          Misc.toLocal("ae2stuff.wireless.tooltips.advtool.hubqols.binding")
+        )
+      case _ =>
     }
     list.add(Misc.toLocal("ae2stuff.wireless.tooltips.advtool.queueing.clear"))
     list.add(Misc.toLocal("ae2stuff.wireless.advtool.extra"))

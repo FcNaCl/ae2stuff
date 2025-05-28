@@ -10,6 +10,7 @@
 package net.bdew.ae2stuff.misc
 
 import net.bdew.ae2stuff.machines.wireless.TileWireless
+import net.bdew.ae2stuff.misc.WirelessKitModes.WirelessKitModes
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.nbt.NBT
 import net.minecraft.item.{Item, ItemStack}
@@ -158,13 +159,33 @@ trait AdvItemLocationStore extends Item {
     * @return
     *   the current mode state of the ItemStack as a Boolean
     */
-  def getMode(stack: ItemStack): Boolean = {
+  def getMode(stack: ItemStack): WirelessKitModes = {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
     if (tag.hasKey("mode_binding")) {
-      return tag.getBoolean("mode_binding")
+      val lineMode = getLineMode(stack)
+      val mode = tag.getBoolean("mode_binding")
+
+      if (lineMode) {
+        if (mode) return WirelessKitModes.MODE_BINDING_LINE
+        else return WirelessKitModes.MODE_QUEUING_LINE
+      } else {
+        if (mode) return WirelessKitModes.MODE_BINDING
+        else return WirelessKitModes.MODE_QUEUING
+      }
+
     }
     tag.setBoolean("mode_binding", false)
+    WirelessKitModes.MODE_QUEUING
+  }
+
+  private def getLineMode(stack: ItemStack): Boolean = {
+    if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
+    val tag = stack.getTagCompound
+    if (tag.hasKey("lineMode")) {
+      return tag.getBoolean("lineMode")
+    }
+    tag.setBoolean("lineMode", false)
     false
   }
 
@@ -178,6 +199,7 @@ trait AdvItemLocationStore extends Item {
     }
     tag.getBoolean("mode_binding")
   }
+
   def toggleLineMode(stack: ItemStack): Boolean = {
     if (!stack.hasTagCompound) stack.setTagCompound(new NBTTagCompound)
     val tag = stack.getTagCompound
