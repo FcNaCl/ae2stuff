@@ -40,8 +40,8 @@ object AdvWirelessKit
     with AdvItemLocationStore {
   setMaxStackSize(1)
 
-  private var queueIcon:IIcon = null
-  private var bindIcon:IIcon = null
+  private var queueIcon: IIcon = null
+  private var bindIcon: IIcon = null
 
   @SideOnly(Side.CLIENT)
   override def registerIcons(reg: IIconRegister) {
@@ -52,15 +52,14 @@ object AdvWirelessKit
 
   override def getIcon(stack: ItemStack, pass: Int): IIcon = {
     getMode(stack) match {
-      case _:WirelessKitModes.QUEUING =>
+      case _: WirelessKitModes.QUEUING =>
         itemIcon = queueIcon
         queueIcon
-      case _:WirelessKitModes.BINDING =>
+      case _: WirelessKitModes.BINDING =>
         itemIcon = bindIcon
         bindIcon
     }
   }
-
 
   /** Determines the direction the player is looking based on their view vector.
     * The method calculates the dominant axis (X, Y, or Z) based on the view
@@ -540,6 +539,15 @@ object AdvWirelessKit
         "ae2stuff.wireless.tooltips.advtool.queueing.clear",
         Minecraft.getMinecraft.gameSettings.keyBindings
           .find(_.getKeyDescription == AE2Stuff.keybindModeId)
+          .map(kb => Keyboard.getKeyName(kb.getKeyCode))
+          .getOrElse("NONE")
+      )
+    )
+    list.add(
+      I18n.format(
+        "ae2stuff.wireless.tooltips.advtool.linemode",
+        Minecraft.getMinecraft.gameSettings.keyBindings
+          .find(_.getKeyDescription == AE2Stuff.keybindLineModeId)
           .map(kb => Keyboard.getKeyName(kb.getKeyCode))
           .getOrElse("NONE")
       )

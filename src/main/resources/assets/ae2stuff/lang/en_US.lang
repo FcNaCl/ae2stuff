@@ -50,6 +50,7 @@ ae2stuff.wireless.advtool.lineModeDisable=Line Mode Disable
 ae2stuff.wireless.tooltips.advtool.queueing.clear=Sneak + %s + R-click for clear queue
 ae2stuff.wireless.tooltips.advtool.hubqols.binding=%s + R-click for connect to all free hub slots
 ae2stuff.wireless.tooltips.advtool.hubqols.queueing=%s + R-click for add all free hub slots to queue
+ae2stuff.wireless.tooltips.advtool.linemode=Press %s to enable or disable line mode
 ae2stuff.wireless.tool.connected=Connected to %s,%s,%s
 ae2stuff.wireless.tool.failed=Connection failed
 ae2stuff.wireless.tool.dimension=Both connectors must be in the same dimension
