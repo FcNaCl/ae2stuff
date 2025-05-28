@@ -49,6 +49,7 @@ object AE2Stuff {
 
   val guiHandler = new GuiHandler
   val keybindLCtrl: SyncedKeybind = SyncedKeybind.create(Keyboard.KEY_LCONTROL)
+  val keybindLineMode: SyncedKeybind = SyncedKeybind.create(Keyboard.CHAR_NONE)
 
   def logDebug(msg: String, args: Any*) = log.debug(msg.format(args: _*))
   def logInfo(msg: String, args: Any*) = log.info(msg.format(args: _*))

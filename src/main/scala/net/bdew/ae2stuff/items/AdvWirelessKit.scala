@@ -20,7 +20,7 @@ import net.bdew.lib.block.BlockRef
 import net.bdew.lib.items.SimpleItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
-import net.minecraft.util.Vec3
+import net.minecraft.util.{IIcon, Vec3}
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import net.bdew.lib.helpers.ChatHelper._
@@ -31,6 +31,27 @@ object AdvWirelessKit
     extends SimpleItem("AdvWirelessKit")
     with AdvItemLocationStore {
   setMaxStackSize(1)
+
+  private var queueIcon:IIcon = null
+  private var bindIcon:IIcon = null
+  
+  @SideOnly(Side.CLIENT)
+  override def registerIcons(reg: IIconRegister): Unit = {
+    queueIcon = reg.registerIcon(Misc.iconName(modId, name))
+    itemIcon = queueIcon
+    bindIcon = reg.registerIcon(Misc.iconName(modId, name + "-binding"))
+  }
+
+  override def getIcon(stack: ItemStack, pass: Int): IIcon = {
+    getMode(stack) match {
+      case _:WirelessKitModes.QUEUING =>
+        itemIcon = queueIcon
+        queueIcon
+      case _:WirelessKitModes.BINDING =>
+        itemIcon = bindIcon
+        bindIcon
+    }
+  }
 
   /** Determines the direction the player is looking based on their view vector.
     * The method calculates the dominant axis (X, Y, or Z) based on the view
