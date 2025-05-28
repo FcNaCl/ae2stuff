@@ -26,6 +26,10 @@ import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import net.bdew.lib.helpers.ChatHelper._
 import net.minecraft.client.renderer.texture.IIconRegister
+import net.minecraft.client.resources.I18n
+import net.minecraft.client.settings.KeyBinding
+import net.minecraft.client.Minecraft
+import org.lwjgl.input.Keyboard
 
 import java.util
 
@@ -36,7 +40,7 @@ object AdvWirelessKit
 
   private var queueIcon:IIcon = null
   private var bindIcon:IIcon = null
-  
+
   @SideOnly(Side.CLIENT)
   override def registerIcons(reg: IIconRegister) {
     queueIcon = reg.registerIcon(Misc.iconName(modId, name))
@@ -513,7 +517,15 @@ object AdvWirelessKit
         )
       case _ =>
     }
-    list.add(Misc.toLocal("ae2stuff.wireless.tooltips.advtool.queueing.clear"))
+    list.add(
+      I18n.format(
+        "ae2stuff.wireless.tooltips.advtool.queueing.clear",
+        Minecraft.getMinecraft.gameSettings.keyBindings
+          .find(_.getKeyDescription == AE2Stuff.keybindModeId)
+          .map(kb => Keyboard.getKeyName(kb.getKeyCode))
+          .getOrElse("NONE")
+      )
+    )
     list.add(Misc.toLocal("ae2stuff.wireless.advtool.extra"))
   }
 }
