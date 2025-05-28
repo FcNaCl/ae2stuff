@@ -11,6 +11,7 @@ package net.bdew.ae2stuff.items
 
 import appeng.api.config.SecurityPermissions
 import appeng.api.exceptions.FailedConnection
+import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.Security
 import net.bdew.ae2stuff.machines.wireless.{BlockWireless, TileWireless}
@@ -24,6 +25,7 @@ import net.minecraft.util.{IIcon, Vec3}
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import net.bdew.lib.helpers.ChatHelper._
+import net.minecraft.client.renderer.texture.IIconRegister
 
 import java.util
 
@@ -36,7 +38,7 @@ object AdvWirelessKit
   private var bindIcon:IIcon = null
   
   @SideOnly(Side.CLIENT)
-  override def registerIcons(reg: IIconRegister): Unit = {
+  override def registerIcons(reg: IIconRegister) {
     queueIcon = reg.registerIcon(Misc.iconName(modId, name))
     itemIcon = queueIcon
     bindIcon = reg.registerIcon(Misc.iconName(modId, name + "-binding"))
