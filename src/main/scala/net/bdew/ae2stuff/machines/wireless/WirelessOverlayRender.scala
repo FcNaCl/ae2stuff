@@ -29,28 +29,34 @@ object WirelessOverlayRender extends WorldOverlayRenderer {
     ) return
     val pos = BlockRef(mop.blockX, mop.blockY, mop.blockZ)
     for {
-      tile <- pos.getTile[TileWirelessBase](Client.world) if tile.isLinked
+      tile <- pos.getTile[TileWirelessBase](Client.world)
     } {
-      tile.getConnectedTiles.foreach(other =>{
+      if (!tile.isLinked)
+        return
+      tile.getConnectedTiles.foreach(other => {
 
-      GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
 
-      GL11.glDisable(GL11.GL_LIGHTING)
-      GL11.glDisable(GL11.GL_TEXTURE_2D)
-      GL11.glDisable(GL11.GL_DEPTH_TEST)
-      GL11.glEnable(GL11.GL_LINE_SMOOTH)
-      GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST)
-      GL11.glLineWidth(4.0f)
+        GL11.glDisable(GL11.GL_LIGHTING)
+        GL11.glDisable(GL11.GL_TEXTURE_2D)
+        GL11.glDisable(GL11.GL_DEPTH_TEST)
+        GL11.glEnable(GL11.GL_LINE_SMOOTH)
+        GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST)
+        GL11.glLineWidth(4.0f)
 
-      val tess = Tessellator.instance
-      tess.startDrawing(GL11.GL_LINES)
-      tess.setColorRGBA_F(0, 0, 1, 1)
-      tess.addVertex(pos.x + 0.5d, pos.y + 0.5d, pos.z + 0.5d)
-      tess.addVertex(other.xCoord + 0.5d, other.yCoord + 0.5d, other.zCoord + 0.5d)
-      tess.draw()
+        val tess = Tessellator.instance
+        tess.startDrawing(GL11.GL_LINES)
+        tess.setColorRGBA_F(0, 0, 1, 1)
+        tess.addVertex(pos.x + 0.5d, pos.y + 0.5d, pos.z + 0.5d)
+        tess.addVertex(
+          other.xCoord + 0.5d,
+          other.yCoord + 0.5d,
+          other.zCoord + 0.5d
+        )
+        tess.draw()
 
-      GL11.glPopAttrib()}
-      )
+        GL11.glPopAttrib()
+      })
     }
 
   }

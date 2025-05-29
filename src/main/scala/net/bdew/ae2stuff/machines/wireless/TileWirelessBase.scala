@@ -17,7 +17,6 @@ import net.minecraftforge.common.util.ForgeDirection
 
 import java.util
 import scala.collection.mutable
-import scala.tools.nsc.util.HashSet
 
 abstract class TileWirelessBase
     extends TileDataSlots

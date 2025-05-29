@@ -16,6 +16,11 @@ import cpw.mods.fml.common.gameevent.TickEvent
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.Security
+import net.bdew.ae2stuff.items.WirelessKitHelper.{
+  checkBindingValidity,
+  checkSecurity,
+  doBind
+}
 import net.bdew.ae2stuff.machines.wireless.{
   BlockWireless,
   TileWirelessBase,
@@ -157,26 +162,6 @@ object AdvWirelessKit
     }
   }
 
-  private def checkSecurity(
-      tile: TileWirelessBase,
-      player: EntityPlayer,
-      pid: Integer
-  ): Boolean = {
-    if (
-      !Security.playerHasPermission(
-        tile.getNode.getGrid,
-        pid,
-        SecurityPermissions.BUILD
-      )
-    ) {
-      player.addChatMessage(
-        L("ae2stuff.wireless.tool.security.player").setColor(Color.RED)
-      )
-      return false
-    }
-    true
-  }
-
   private def checkHubAvailability(
       player: EntityPlayer,
       tile: TileWirelessBase
@@ -241,84 +226,6 @@ object AdvWirelessKit
     return false // No line queueing
   }
 
-  private def doBind(
-      src: TileWirelessBase,
-      dst: TileWirelessBase,
-      player: EntityPlayer,
-      pid: Integer
-  ): Boolean = {
-    // Player can modify both sides - unlink current connections if any
-    if (!src.canAddLink) src.doUnlink()
-    if (!src.canAddLink) dst.doUnlink()
-
-    // Make player the owner of both blocks
-    src.getNode.setPlayerID(pid)
-    dst.getNode.setPlayerID(pid)
-    try {
-      if (src.doLink(dst)) {
-        player.addChatMessage(
-          L(
-            "ae2stuff.wireless.tool.connected",
-            src.xCoord.toString,
-            src.yCoord.toString,
-            src.zCoord.toString
-          ).setColor(Color.GREEN)
-        )
-        return true
-      } else {
-        player.addChatMessage(
-          L("ae2stuff.wireless.tool.failed").setColor(
-            Color.RED
-          )
-        )
-      }
-    } catch {
-      case e: FailedConnection =>
-        player.addChatComponentMessage(
-          (L(
-            "ae2stuff.wireless.tool.failed"
-          ) & ": " & e.getMessage).setColor(Color.RED)
-        )
-        dst.doUnlink()
-        print("Failed to link wireless connector: " + e)
-    }
-    false
-  }
-
-  private def checkBindingValidity(
-      stack: ItemStack,
-      target: TileWirelessBase,
-      player: EntityPlayer,
-      pid: Integer
-  ): Boolean = {
-    if (!hasLocation(stack)) {
-      player.addChatMessage(
-        L("ae2stuff.wireless.advtool.noconnectors").setColor(Color.RED)
-      )
-      return false
-    }
-
-    if (getDimension(stack) != player.worldObj.provider.dimensionId) {
-      // Different dimensions - error out
-      player.addChatMessage(
-        L("ae2stuff.wireless.tool.dimension").setColor(Color.RED)
-      )
-      return false
-    }
-
-    if (!checkSecurity(target, player, pid)) {
-      return false
-    }
-
-    if (!target.canAddLink) {
-      player.addChatMessage(
-        L("ae2stuff.wireless.tool.targethubfull").setColor(Color.RED)
-      )
-      return false
-    }
-    true
-  }
-
   private def bindWireless(
       target: TileWirelessBase,
       stack: ItemStack,
@@ -345,10 +252,8 @@ object AdvWirelessKit
 //        return true
 //      }
 
-      if (doBind(tile, target, player, pid))
-        player.addChatMessage(
-          L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
-        )
+      doBind(tile, target, player, pid)
+
       if (once)
         return true
     }

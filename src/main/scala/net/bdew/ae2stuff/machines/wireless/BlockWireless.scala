@@ -33,7 +33,7 @@ object BlockWireless
     with HasTE[TileWirelessBase]
     with BlockWrenchable
     with HasItemBlock {
-  override val TEClass = classOf[TileWirelessBase]
+  override val TEClass = classOf[TileWireless]
   override val ItemBlockClass: Class[_ <: ItemBlockWireless] =
     classOf[ItemBlockWireless]
 

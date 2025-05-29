@@ -30,8 +30,8 @@ import net.minecraftforge.common.util.ForgeDirection
 
 class TileWireless extends TileWirelessBase {
 
-//  private val link =
-//    DataSlotPos("link", this).setUpdate(UpdateKind.SAVE, UpdateKind.WORLD)
+  private val link =
+    DataSlotPos("link", this).setUpdate(UpdateKind.SAVE, UpdateKind.WORLD)
   val maxConnections = 1
 
   override def canAddLink: Boolean = getAvailableConnections > 0

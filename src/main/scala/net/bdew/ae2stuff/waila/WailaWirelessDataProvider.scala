@@ -33,9 +33,9 @@ object WailaWirelessDataProvider
       z: Int
   ): NBTTagCompound = {
     if (te.isLinked) {
-      val pos = Option(te.getConnectedTiles.map (link =>
-        NBT.from(link.writeToNBT _)
-      )).getOrElse(Set.empty[NBTTagCompound])
+      val pos = Option(
+        te.getConnectedTiles.map(link => NBT.from(link.writeToNBT _))
+      ).getOrElse(Set.empty[NBTTagCompound])
 
       val data = NBT(
         "connected" -> true,
