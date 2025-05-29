@@ -12,7 +12,7 @@ package net.bdew.ae2stuff.waila
 import appeng.api.config.PowerMultiplier
 import appeng.api.util.AEColor
 import mcp.mobius.waila.api.{IWailaConfigHandler, IWailaDataAccessor}
-import net.bdew.ae2stuff.machines.wireless.TileWireless
+import net.bdew.ae2stuff.machines.wireless.TileWirelessBase
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.nbt.NBT
 import net.bdew.lib.{DecFormat, Misc}
@@ -22,10 +22,10 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.world.World
 
 object WailaWirelessDataProvider
-    extends BaseDataProvider(classOf[TileWireless]) {
+    extends BaseDataProvider(classOf[TileWirelessBase]) {
   override def getNBTTag(
       player: EntityPlayerMP,
-      te: TileWireless,
+      te: TileWirelessBase,
       tag: NBTTagCompound,
       world: World,
       x: Int,
@@ -33,14 +33,15 @@ object WailaWirelessDataProvider
       z: Int
   ): NBTTagCompound = {
     if (te.isLinked) {
-      val pos = te.link map (link =>
+      val pos = Option(te.getConnectedTiles.map (link =>
         NBT.from(link.writeToNBT _)
-      ) getOrElse new NBTTagCompound
+      )).getOrElse(Set.empty[NBTTagCompound])
+
       val data = NBT(
         "connected" -> true,
         "target" -> pos,
-        "channels" -> (if (te.connection != null)
-                         te.connection.getUsedChannels
+        "channels" -> (if (te.isLinked)
+                         te.getUsedChannels
                        else 0),
         "power" -> PowerMultiplier.CONFIG.multiply(te.getIdlePowerUsage),
         "color" -> te.color.ordinal()
@@ -49,16 +50,6 @@ object WailaWirelessDataProvider
         data.setString("name", te.customName)
       }
       tag.setTag("wireless_waila", data)
-    } else if (te.isHub) {
-      val data = NBT(
-        "channels" -> te.getHubChannels,
-        "color" -> te.color.ordinal(),
-        "power" -> PowerMultiplier.CONFIG.multiply(te.getIdlePowerUsage)
-      )
-      if (te.hasCustomName) {
-        data.setString("name", te.customName)
-      }
-      tag.setTag("wirelesshub_waila", data)
     } else {
       val data = NBT(
         "connected" -> false,
@@ -73,7 +64,7 @@ object WailaWirelessDataProvider
   }
 
   override def getBodyStrings(
-      target: TileWireless,
+      target: TileWirelessBase,
       stack: ItemStack,
       acc: IWailaDataAccessor,
       cfg: IWailaConfigHandler

@@ -9,7 +9,7 @@
 
 package net.bdew.ae2stuff.misc
 
-import net.bdew.ae2stuff.machines.wireless.TileWireless
+import net.bdew.ae2stuff.machines.wireless.TileWirelessBase
 import net.bdew.ae2stuff.misc.WirelessKitModes.WirelessKitModes
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.nbt.NBT
@@ -82,18 +82,18 @@ trait AdvItemLocationStore extends Item {
   private[misc] class TileWirelessIterator(
       stack: ItemStack,
       world: World,
-      target: TileWireless
+      target: TileWirelessBase
   ) {
     private val tags: NBTTagList =
       stack.getTagCompound.getTagList("loc", COMPOUND_TAG)
-    private var wireless: Option[TileWireless] = None
+    private var wireless: Option[TileWirelessBase] = None
     private var canNext: Boolean = false
 
     def hasNext: Boolean = {
       while (!canNext && tags.tagCount() > 0) {
         wireless = BlockRef
           .fromNBT(tags.removeTag(0).asInstanceOf[NBTTagCompound])
-          .getTile[TileWireless](world)
+          .getTile[TileWirelessBase](world)
         wireless match {
           case Some(w) if w != target =>
             canNext = true
@@ -103,20 +103,22 @@ trait AdvItemLocationStore extends Item {
       false
     }
 
-    def next(): TileWireless = {
+    def next(): TileWirelessBase = {
       if (!canNext && !hasNext) {
         throw new NoSuchElementException("No more locations available")
       }
       canNext = false
       wireless.get
     }
-    def foreach(f: TileWireless => Unit): Unit = { while (hasNext) f(next()) }
+    def foreach(f: TileWirelessBase => Unit): Unit = {
+      while (hasNext) f(next())
+    }
   }
 
   def iterOnValidLocation(
       stack: ItemStack,
       world: World,
-      target: TileWireless
+      target: TileWirelessBase
   ): TileWirelessIterator = {
     new TileWirelessIterator(stack, world, target)
   }

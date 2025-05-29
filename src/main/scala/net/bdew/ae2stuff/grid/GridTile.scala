@@ -72,13 +72,12 @@ trait GridTile extends TileExtended with IGridHost with IGridBlock {
     super.onChunkUnload()
   }
 
-  def getNode = {
-    if (getWorldObj == null || getWorldObj.isRemote) null
-    else {
-      if (node == null)
-        node = AEApi.instance().createGridNode(this)
-      node
-    }
+  def getNode: IGridNode = {
+    if (getWorldObj == null || getWorldObj.isRemote) return null
+
+    if (node == null)
+      node = AEApi.instance().createGridNode(this)
+    node
   }
 
   def safePostEvent(ev: MENetworkEvent) = {

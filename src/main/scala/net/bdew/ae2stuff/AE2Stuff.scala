@@ -20,7 +20,10 @@ import cpw.mods.fml.relauncher.Side
 import net.bdew.ae2stuff.compat.WrenchRegistry
 import net.bdew.ae2stuff.items.AdvWirelessKit
 import net.bdew.ae2stuff.items.AdvWirelessKit.toggleLineMode
-import net.bdew.ae2stuff.items.visualiser.{VisualiserOverlayRender, VisualiserPlayerTracker}
+import net.bdew.ae2stuff.items.visualiser.{
+  VisualiserOverlayRender,
+  VisualiserPlayerTracker
+}
 import net.bdew.ae2stuff.machines.wireless.WirelessOverlayRender
 import net.bdew.ae2stuff.misc.{Icons, MouseEventHandler, OverlayRenderHandler}
 import net.bdew.ae2stuff.network.NetHandler
@@ -54,7 +57,7 @@ object AE2Stuff {
   val keybindModeSwitch = SyncedKeybind.createConfigurable(
     keybindModeId,
     "itemGroup.bdew.ae2stuff",
-    Keyboard.CHAR_NONE
+    Keyboard.KEY_LCONTROL
   )
 
   val keybindLineMode: SyncedKeybind = SyncedKeybind.createConfigurable(
@@ -64,7 +67,10 @@ object AE2Stuff {
   )
 
   private object callback extends IKeyPressedListener {
-    def onKeyPressed(player: EntityPlayerMP, keyPressed: SyncedKeybind) = {
+    override def onKeyPressed(
+        player: EntityPlayerMP,
+        keyPressed: SyncedKeybind
+    ): Unit = {
       if (AE2Stuff.keybindLineMode.isKeyDown(player)) {
         for {
           stack <- Option(player.getCurrentEquippedItem)
@@ -82,8 +88,26 @@ object AE2Stuff {
     }
   }
 
-
   keybindLineMode.registerGlobalListener(callback)
+
+//  keybindLineMode.registerGlobalListener(new IKeyPressedListener {
+//    override def onKeyPressed(player: EntityPlayerMP, keyPressed: SyncedKeybind): Unit = {
+//      if (AE2Stuff.keybindLineMode.isKeyDown(player)) {
+//        for {
+//          stack <- Option(player.getCurrentEquippedItem)
+//          item <- Some(stack.getItem) if item == AdvWirelessKit
+//        } player.addChatMessage(
+//          L(
+//            if (toggleLineMode(stack)) {
+//              "ae2stuff.wireless.advtool.lineModeEnable"
+//            } else {
+//              "ae2stuff.wireless.advtool.lineModeDisable"
+//            }
+//          ).setColor(Color.GREEN)
+//        )
+//      }
+//    }
+//  })
 
   def logDebug(msg: String, args: Any*) = log.debug(msg.format(args: _*))
   def logInfo(msg: String, args: Any*) = log.info(msg.format(args: _*))

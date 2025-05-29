@@ -16,7 +16,11 @@ import cpw.mods.fml.common.gameevent.TickEvent
 import cpw.mods.fml.relauncher.{Side, SideOnly}
 import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.Security
-import net.bdew.ae2stuff.machines.wireless.{BlockWireless, TileWireless}
+import net.bdew.ae2stuff.machines.wireless.{
+  BlockWireless,
+  TileWirelessBase,
+  TileWirelessHub
+}
 import net.bdew.ae2stuff.misc.{AdvItemLocationStore, WirelessKitModes}
 import net.bdew.lib.Misc
 import net.bdew.lib.block.BlockRef
@@ -154,7 +158,7 @@ object AdvWirelessKit
   }
 
   private def checkSecurity(
-      tile: TileWireless,
+      tile: TileWirelessBase,
       player: EntityPlayer,
       pid: Integer
   ): Boolean = {
@@ -175,19 +179,18 @@ object AdvWirelessKit
 
   private def checkHubAvailability(
       player: EntityPlayer,
-      tile: TileWireless
+      tile: TileWirelessBase
   ): Boolean = {
-    if (tile.connectionsList.length >= 32) {
-      player.addChatMessage(
-        L("ae2stuff.wireless.tool.targethubfull").setColor(Color.RED)
-      )
-      return false
-    }
-    true
+    if (tile.isHub && tile.canAddLink)
+      return true
+    player.addChatMessage(
+      L("ae2stuff.wireless.tool.targethubfull").setColor(Color.RED)
+    )
+    false
   }
 
   private def appEndQueue(
-      tile: TileWireless,
+      tile: TileWirelessBase,
       stack: ItemStack,
       pos: BlockRef,
       player: EntityPlayer,
@@ -195,11 +198,11 @@ object AdvWirelessKit
   ): Boolean = {
 
     val ctrlIsDown = AE2Stuff.keybindModeSwitch.isKeyDown(player)
-    val freeConnexions =
-      if (ctrlIsDown && tile.isHub) 32 - tile.connectionsList.length else 1
+    val freeConnexions = if (ctrlIsDown) tile.getAvailableConnections else 1
     if (!checkHubAvailability(player, tile)) return false
     var i = 0
     var success = false
+
     while (i < freeConnexions) {
       success =
         addLocation(stack, pos, world.provider.dimensionId, isHub = true)
@@ -239,14 +242,14 @@ object AdvWirelessKit
   }
 
   private def doBind(
-      src: TileWireless,
-      dst: TileWireless,
+      src: TileWirelessBase,
+      dst: TileWirelessBase,
       player: EntityPlayer,
       pid: Integer
   ): Boolean = {
     // Player can modify both sides - unlink current connections if any
-    if (!src.isHub) src.doUnlink()
-    if (!dst.isHub) dst.doUnlink()
+    if (!src.canAddLink) src.doUnlink()
+    if (!src.canAddLink) dst.doUnlink()
 
     // Make player the owner of both blocks
     src.getNode.setPlayerID(pid)
@@ -282,9 +285,9 @@ object AdvWirelessKit
     false
   }
 
-  private def checkTargetValidity(
+  private def checkBindingValidity(
       stack: ItemStack,
-      target: TileWireless,
+      target: TileWirelessBase,
       player: EntityPlayer,
       pid: Integer
   ): Boolean = {
@@ -307,7 +310,7 @@ object AdvWirelessKit
       return false
     }
 
-    if (target.connectionsList.length >= 32) {
+    if (!target.canAddLink) {
       player.addChatMessage(
         L("ae2stuff.wireless.tool.targethubfull").setColor(Color.RED)
       )
@@ -317,17 +320,17 @@ object AdvWirelessKit
   }
 
   private def bindWireless(
-      target: TileWireless,
+      target: TileWirelessBase,
       stack: ItemStack,
       player: EntityPlayer,
       world: World
   ): Boolean = {
 
     val pid = Security.getPlayerId(player)
-    if (!checkTargetValidity(stack, target, player, pid)) return true
+    if (!checkBindingValidity(stack, target, player, pid)) return true
 
     val ctrlIsDown = AE2Stuff.keybindModeSwitch.isKeyDown(player)
-    val once = !(ctrlIsDown && target.isHub)
+    val once = !ctrlIsDown
     val iterator = iterOnValidLocation(stack, world, target)
     iterator.foreach { tile =>
       // And check that the player can modify it too
@@ -335,15 +338,17 @@ object AdvWirelessKit
         return true
       }
 
-      if (tile.isHub && target.isHub) {
+//      if (tile.isHub && target.isHub) {
+//        player.addChatMessage(
+//          L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
+//        )
+//        return true
+//      }
+
+      if (doBind(tile, target, player, pid))
         player.addChatMessage(
           L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
         )
-        return true
-      }
-
-      doBind(tile, target, player, pid)
-
       if (once)
         return true
     }
@@ -351,39 +356,42 @@ object AdvWirelessKit
   }
 
   private def bindWirelessLine(
-      target: TileWireless,
+      target: TileWirelessBase,
       stack: ItemStack,
       player: EntityPlayer,
       world: World
   ): Boolean = {
-    var var_target: TileWireless = target
+    var _target: TileWirelessBase = target
 
     val pid = Security.getPlayerId(player)
-    if (!checkTargetValidity(stack, var_target, player, pid)) return true
+    if (!checkBindingValidity(stack, _target, player, pid)) return true
 
-    var x: Int = var_target.xCoord
-    var y: Int = var_target.yCoord
-    var z: Int = var_target.zCoord
+    var x: Int = _target.xCoord
+    var y: Int = _target.yCoord
+    var z: Int = _target.zCoord
 
     val direction = FindPlayerLookDirection(player)
 
-    val iterator = iterOnValidLocation(stack, world, var_target)
+    val iterator = iterOnValidLocation(stack, world, _target)
     iterator.foreach { tile =>
       // And check that the player can modify it too
       if (!checkSecurity(tile, player, pid)) {
         return true
       }
 
-      if (tile.isHub && var_target.isHub) {
+//      if (tile.isHub && _target.isHub) {
+//        player.addChatMessage(
+//          L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
+//        )
+//        return true
+//      }
+
+      // bind the selected wireless in queue and the target
+      if (doBind(tile, _target, player, pid)) {
         player.addChatMessage(
           L("ae2stuff.wireless.tool.failed").setColor(Color.RED)
         )
-        return true
       }
-
-      // bind the selected wireless in queue and the target
-      doBind(tile, var_target, player, pid)
-
       direction match {
         case ForgeDirection.UP    => y = y + 1
         case ForgeDirection.DOWN  => y = y - 1
@@ -393,8 +401,9 @@ object AdvWirelessKit
         case ForgeDirection.SOUTH => z = z + 1
         case _                    => return true
       }
-      var_target =
-        BlockRef(x, y, z).getTile[TileWireless](world).getOrElse(return true)
+      _target = BlockRef(x, y, z)
+        .getTile[TileWirelessBase](world)
+        .getOrElse(return true)
     }
     true
   }
@@ -446,7 +455,7 @@ object AdvWirelessKit
 
     val pos = BlockRef(x, y, z)
     if (!pos.blockIs(world, BlockWireless)) return false
-    val tile: TileWireless = pos.getTile[TileWireless](world).get
+    val tile: TileWirelessBase = pos.getTile[TileWirelessBase](world).get
     if (tile == null) return false
     val pid = Security.getPlayerId(player)
     // Check that the player can modify the network

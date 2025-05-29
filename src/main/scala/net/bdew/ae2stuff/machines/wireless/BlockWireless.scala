@@ -30,16 +30,14 @@ import java.util
 
 object BlockWireless
     extends SimpleBlock("Wireless", MachineMaterial)
-    with HasTE[TileWireless]
+    with HasTE[TileWirelessBase]
     with BlockWrenchable
     with HasItemBlock {
-  override val TEClass = classOf[TileWireless]
+  override val TEClass = classOf[TileWirelessBase]
   override val ItemBlockClass: Class[_ <: ItemBlockWireless] =
     classOf[ItemBlockWireless]
 
   setHardness(1)
-
-  var isHub = false;
 
   override def getDrops(
       world: World,
@@ -49,22 +47,13 @@ object BlockWireless
       metadata: Int,
       fortune: Int
   ): util.ArrayList[ItemStack] = {
-    val stack = new ItemStack(this)
-    val te = world.getTileEntity(x, y, z).asInstanceOf[TileWireless]
-    if (te != null) {
-      if (te.isHub) {
-        if (te.color != AEColor.Transparent) {
-          stack.setItemDamage(te.color.ordinal() + 18)
-        } else {
-          stack.setItemDamage(17)
-        }
-      } else if (te.color != AEColor.Transparent) {
-        stack.setItemDamage(te.color.ordinal() + 1)
-      }
-    } else if (isHub) {
-      stack.setItemDamage(17);
-    }
+    val te = world.getTileEntity(x, y, z).asInstanceOf[TileWirelessBase]
+
     val drops = new util.ArrayList[ItemStack]()
+    if (te != null) {
+      return te.getDrops(world, x, y, z, metadata, fortune, drops)
+    }
+    val stack = new ItemStack(this)
     drops.add(stack)
     drops
   }
@@ -89,18 +78,7 @@ object BlockWireless
       z: Int,
       player: EntityPlayer
   ): ItemStack = {
-    val stack = new ItemStack(this)
-    val te = getTE(world, x, y, z)
-    if (te.isHub) {
-      if (te.color != AEColor.Transparent) {
-        stack.setItemDamage(te.color.ordinal() + 18)
-      } else {
-        stack.setItemDamage(17)
-      }
-    } else if (te.color != AEColor.Transparent) {
-      stack.setItemDamage(te.color.ordinal() + 1)
-    }
-    stack
+    getDrops(world, x, y, z, 0, 0).get(0)
   }
 
   override def breakBlock(
@@ -113,7 +91,6 @@ object BlockWireless
   ): Unit = {
     val te = getTE(world, x, y, z);
     te.doUnlink()
-    isHub = te.isHub;
     super.breakBlock(world, x, y, z, block, meta)
   }
 
@@ -129,22 +106,22 @@ object BlockWireless
     if (player.isInstanceOf[EntityPlayer]) {
       te.placingPlayer = player.asInstanceOf[EntityPlayer]
     }
-    if (stack != null) {
-      val itemDamage = stack.getItemDamage
-      if (stack.hasDisplayName) {
-        te.customName = stack.getDisplayName
-      }
-      if (itemDamage > 16) {
-        te.isHub = true;
-        if (itemDamage == 17) {
-          te.color = AEColor.values().apply(16)
-        } else {
-          te.color = AEColor.values().apply(itemDamage - 18)
-        }
-      } else if (itemDamage > 0) {
-        te.color = AEColor.values().apply(itemDamage - 1)
-      }
+    if (stack == null) { return }
+
+    val itemDamage = stack.getItemDamage
+    if (stack.hasDisplayName) {
+      te.customName = stack.getDisplayName
     }
+    if (itemDamage > 16) {
+      if (itemDamage == 17) {
+        te.color = AEColor.values().apply(16)
+      } else {
+        te.color = AEColor.values().apply(itemDamage - 18)
+      }
+    } else if (itemDamage > 0) {
+      te.color = AEColor.values().apply(itemDamage - 1)
+    }
+
   }
 
   override def onBlockActivatedReal(
@@ -161,7 +138,7 @@ object BlockWireless
     val item = player.getHeldItem
     if (item != null && item.getItem.isInstanceOf[ToolQuartzCuttingKnife]) {
       val te = world.getTileEntity(x, y, z)
-      if (te.isInstanceOf[TileWireless]) {
+      if (te.isInstanceOf[TileWirelessBase]) {
         player.openGui(
           AppEng.instance,
           (GuiBridge.GUI_RENAMER.ordinal << 5) | side,
@@ -189,18 +166,20 @@ object BlockWireless
   ): IIcon = {
     val te = getTE(worldIn, x, y, z)
     val meta = worldIn.getBlockMetadata(x, y, z)
-    if (te.isHub) {
-      if (meta > 0) {
-        icon_on.apply(te.color.ordinal() + 17)
-      } else {
-        icon_off.apply(te.color.ordinal() + 17)
-      }
-    } else {
-      if (meta > 0) {
-        icon_on.apply(te.color.ordinal())
-      } else {
-        icon_off.apply(te.color.ordinal())
-      }
+
+    te.isHub match {
+      case true =>
+        if (meta > 0) {
+          icon_on.apply(te.color.ordinal() + 17)
+        } else {
+          icon_off.apply(te.color.ordinal() + 17)
+        }
+      case false =>
+        if (meta > 0) {
+          icon_on.apply(te.color.ordinal())
+        } else {
+          icon_off.apply(te.color.ordinal())
+        }
     }
   }
 
