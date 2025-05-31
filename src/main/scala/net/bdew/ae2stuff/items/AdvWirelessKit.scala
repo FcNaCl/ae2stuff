@@ -81,25 +81,25 @@ object AdvWirelessKit
     *   The determined ForgeDirection representing the player's look direction,
     *   which could be ForgeDirection.EAST, WEST, UP, DOWN, NORTH, or SOUTH.
     */
-  private def FindPlayerLookDirection(player: EntityPlayer): ForgeDirection = {
+  private def FindPlayerLookVectorDirection(player: EntityPlayer): ForgeDirection = {
     val view: Vec3 = player.getLookVec()
     val absX = Math.abs(view.xCoord)
     val absY = Math.abs(view.yCoord)
     val absZ = Math.abs(view.zCoord)
     if (absX > absY && absX > absZ) {
-      return FindPlayerLookVectorOrientation(
+      FindPlayerLookVectorOrientation(
         view.xCoord,
         ForgeDirection.EAST,
         ForgeDirection.WEST
       )
     } else if (absY > absX && absY > absZ) {
-      return FindPlayerLookVectorOrientation(
+      FindPlayerLookVectorOrientation(
         view.yCoord,
         ForgeDirection.UP,
         ForgeDirection.DOWN
       )
     } else {
-      return FindPlayerLookVectorOrientation(
+      FindPlayerLookVectorOrientation(
         view.zCoord,
         ForgeDirection.SOUTH,
         ForgeDirection.NORTH
@@ -129,9 +129,9 @@ object AdvWirelessKit
       dir2: ForgeDirection
   ): ForgeDirection = {
     if (coord > 0) {
-      return dir1
+      dir1
     } else {
-      return dir2
+      dir2
     }
   }
 
@@ -275,7 +275,7 @@ object AdvWirelessKit
     var y: Int = _target.yCoord
     var z: Int = _target.zCoord
 
-    val direction = FindPlayerLookDirection(player)
+    val direction = FindPlayerLookVectorDirection(player)
 
     val iterator = iterOnValidLocation(stack, world, _target)
     iterator.foreach { tile =>
