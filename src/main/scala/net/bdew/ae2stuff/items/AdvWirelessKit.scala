@@ -21,11 +21,9 @@ import net.bdew.ae2stuff.items.WirelessKitHelper.{
   checkSecurity,
   doBind
 }
-import net.bdew.ae2stuff.machines.wireless.{
-  BlockWireless,
-  TileWirelessBase,
-  TileWirelessHub
-}
+import net.bdew.ae2stuff.machines.wireless.hub.TileWirelessHub
+import net.bdew.ae2stuff.machines.wireless.TileWirelessBase
+import net.bdew.ae2stuff.machines.wireless.simple.BlockWireless
 import net.bdew.ae2stuff.misc.{AdvItemLocationStore, WirelessKitModes}
 import net.bdew.lib.Misc
 import net.bdew.lib.block.BlockRef

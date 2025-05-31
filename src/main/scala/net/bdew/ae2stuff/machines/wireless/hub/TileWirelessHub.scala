@@ -1,10 +1,11 @@
-package net.bdew.ae2stuff.machines.wireless
+package net.bdew.ae2stuff.machines.wireless.hub
+
 import appeng.api.networking.IGridNode
 import appeng.api.util.AEColor
-import net.minecraft.entity.player.EntityPlayer
+import net.bdew.ae2stuff.machines.wireless.TileWirelessBase
+import net.bdew.ae2stuff.machines.wireless.simple.BlockWireless
 import net.minecraft.item.ItemStack
 import net.minecraft.world.World
-import net.minecraftforge.common.util.ForgeDirection
 
 import java.util
 

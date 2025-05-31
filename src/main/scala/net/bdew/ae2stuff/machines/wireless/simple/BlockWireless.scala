@@ -7,13 +7,14 @@
  * http://bdew.net/minecraft-mod-public-license/
  */
 
-package net.bdew.ae2stuff.machines.wireless
+package net.bdew.ae2stuff.machines.wireless.simple
 
 import appeng.api.util.AEColor
 import appeng.core.AppEng
 import appeng.core.sync.GuiBridge
 import appeng.items.tools.quartz.ToolQuartzCuttingKnife
 import cpw.mods.fml.relauncher.{Side, SideOnly}
+import net.bdew.ae2stuff.machines.wireless.TileWirelessBase
 import net.bdew.ae2stuff.misc.{BlockWrenchable, MachineMaterial}
 import net.bdew.lib.Misc
 import net.bdew.lib.block.{HasItemBlock, HasTE, ItemBlockTooltip, SimpleBlock}

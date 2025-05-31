@@ -9,6 +9,7 @@
 
 package net.bdew.ae2stuff.machines.wireless
 
+import net.bdew.ae2stuff.machines.wireless.simple.BlockWireless
 import net.bdew.lib.machine.Machine
 
 object MachineWireless extends Machine("Wireless", BlockWireless) {

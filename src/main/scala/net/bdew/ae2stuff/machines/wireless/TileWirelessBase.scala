@@ -6,8 +6,9 @@ import appeng.api.networking.security.IActionHost
 import appeng.api.util.AEColor
 import appeng.helpers.ICustomNameObject
 import net.bdew.ae2stuff.grid.{GridTile, VariableIdlePower}
+import net.bdew.ae2stuff.machines.wireless.simple.BlockWireless
 import net.bdew.lib.block.BlockRef
-import net.bdew.lib.data.base.{TileDataSlots, UpdateKind}
+import net.bdew.lib.data.base.{DataSlotVal, TileDataSlots, UpdateKind}
 import net.minecraft.block.Block
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
@@ -17,6 +18,7 @@ import net.minecraftforge.common.util.ForgeDirection
 
 import java.util
 import scala.collection.mutable
+import scala.collection.immutable
 
 abstract class TileWirelessBase
     extends TileDataSlots
@@ -38,17 +40,18 @@ abstract class TileWirelessBase
 
   val maxConnections: Int
 
-  val connectionMap: mutable.HashMap[TileWirelessBase, IGridConnection] =
-    mutable.HashMap[TileWirelessBase, IGridConnection]()
 
-  def getConnectedTiles: collection.Set[TileWirelessBase] = connectionMap.keySet
-  def getAllConnection: collection.Set[IGridConnection] =
-    connectionMap.values.toSet
+  private val connectedTarget: WirelessDataSlot = WirelessDataSlot("connectedTarget", this)
+  //private val connectedTarget = List.empty[TileWirelessBase]
+  private val connections = List.empty[IGridConnection]
 
-  def isConnecterTo(other: TileWirelessBase): Boolean =
-    connectionMap.contains(other) && other.connectionMap.contains(this)
+  def getConnectedTiles: immutable.List[TileWirelessBase] = connectedTarget.filter(_.getTile[TileWirelessBase](worldObj).nonEmpty).map(_.get)
+  def getAllConnection: immutable.List[IGridConnection] = connections
 
-  def isLinked = connectionMap.nonEmpty
+  def isConnectedTo(other: TileWirelessBase): Boolean =
+    connectedTarget.contains(other) && other.connectedTarget.contains(this)
+
+  def isLinked: Boolean = connectedTarget.nonEmpty
 
   def isHub: Boolean = maxConnections > 1
 

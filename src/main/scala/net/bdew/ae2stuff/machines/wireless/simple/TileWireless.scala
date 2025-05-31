@@ -7,26 +7,18 @@
  * http://bdew.net/minecraft-mod-public-license/
  */
 
-package net.bdew.ae2stuff.machines.wireless
+package net.bdew.ae2stuff.machines.wireless.simple
+
+import appeng.api.AEApi
+import appeng.api.networking.GridFlags
+import appeng.api.util.AEColor
+import net.bdew.ae2stuff.machines.wireless.TileWirelessBase
+import net.bdew.lib.data.base.UpdateKind
+import net.bdew.lib.multiblock.data.DataSlotPos
+import net.minecraft.item.ItemStack
+import net.minecraft.world.World
 
 import java.util
-import appeng.api.AEApi
-import appeng.api.implementations.tiles.IColorableTile
-import appeng.api.networking.security.IActionHost
-import appeng.api.networking.{GridFlags, IGridConnection, IGridNode}
-import appeng.api.util.AEColor
-import appeng.helpers.ICustomNameObject
-import net.bdew.ae2stuff.AE2Stuff
-import net.bdew.ae2stuff.grid.{GridTile, VariableIdlePower}
-import net.bdew.lib.block.BlockRef
-import net.bdew.lib.data.base.{TileDataSlots, UpdateKind}
-import net.bdew.lib.multiblock.data.DataSlotPos
-import net.minecraft.block.Block
-import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.item.ItemStack
-import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.world.World
-import net.minecraftforge.common.util.ForgeDirection
 
 class TileWireless extends TileWirelessBase {
 
@@ -60,7 +52,7 @@ class TileWireless extends TileWirelessBase {
 //  })
 
   override def doLink(other: TileWirelessBase): Boolean = {
-    if (!canAddLink || !other.canAddLink || isConnecterTo(other)) return false
+    if (!canAddLink || !other.canAddLink || isConnectedTo(other)) return false
 
     this.customName = other.customName
     setupConnection(other)

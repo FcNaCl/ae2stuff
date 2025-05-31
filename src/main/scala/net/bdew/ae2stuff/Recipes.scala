@@ -2,7 +2,7 @@ package net.bdew.ae2stuff
 
 import cpw.mods.fml.common.registry.GameRegistry
 import net.bdew.ae2stuff.items.{AdvWirelessKit, ItemWirelessKit}
-import net.bdew.ae2stuff.machines.wireless.BlockWireless
+import net.bdew.ae2stuff.machines.wireless.simple.BlockWireless
 import net.minecraft.item.ItemStack
 
 object Recipes {
