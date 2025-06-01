@@ -22,106 +22,16 @@ import java.util
 
 class TileWireless extends TileWirelessBase {
 
-  private val link =
-    DataSlotPos("link", this).setUpdate(UpdateKind.SAVE, UpdateKind.WORLD)
-  val maxConnections = 1
-
-  override def canAddLink: Boolean = getAvailableConnections > 0
-  override def getAvailableConnections: Int =
-    maxConnections - connectionMap.size
-
-  override def getFlags: util.EnumSet[GridFlags] =
-    util.EnumSet.of(GridFlags.DENSE_CAPACITY)
-
-//  serverTick.listen(() => {
-//    if (connection == null && link.isDefined) {
-//      try {
-//        setupConnection()
-//      } catch {
-//        case t: Throwable =>
-//          AE2Stuff.logWarnException(
-//            "Failed setting up wireless link %s <-> %s: %s",
-//            t,
-//            myPos,
-//            link.get,
-//            t.getMessage
-//          )
-//          doUnlink()
-//      }
-//    }
-//  })
+  override val maxConnections = 1
 
   override def doLink(other: TileWirelessBase): Boolean = {
-    if (!canAddLink || !other.canAddLink || isConnectedTo(other)) return false
-
+    doUnlink()
     this.customName = other.customName
     setupConnection(other)
   }
 
   def doUnlink(): Unit = {
-    breakConnection()
-  }
-
-  private def setupConnection(other: TileWirelessBase): Boolean = {
-    val connection = Option(
-      AEApi.instance().createGridConnection(this.getNode, other.getNode)
-    ).getOrElse(return false)
-
-    connectionMap.put(other, connection)
-    other.connectionMap.put(this, connection)
-
-    val dx = this.xCoord - other.xCoord
-    val dy = this.yCoord - other.yCoord
-    val dz = this.zCoord - other.zCoord
-    // val power = cfg.powerBase + cfg.powerDistanceMultiplier * (dx * dx + dy * dy + dz * dz)
-    val dist = math.sqrt(dx * dx + dy * dy + dz * dz)
-    val power = cfg.powerBase + cfg.powerDistanceMultiplier * dist * math.log(
-      dist * dist + 3
-    )
-    this.setIdlePowerUse(power)
-
-    other.setIdlePowerUse(power)
-
-    if (worldObj.blockExists(xCoord, yCoord, zCoord))
-      worldObj.setBlockMetadataWithNotify(
-        this.xCoord,
-        this.yCoord,
-        this.zCoord,
-        1,
-        3
-      )
-    if (worldObj.blockExists(other.xCoord, other.yCoord, other.zCoord)) {
-      worldObj.setBlockMetadataWithNotify(
-        other.xCoord,
-        other.yCoord,
-        other.zCoord,
-        1,
-        3
-      )
-    }
-    true
-  }
-
-  private def breakConnection(): Unit = {
-    getAllConnection.foreach(_.destroy())
-
-    getConnectedTiles foreach { other =>
-      other.setIdlePowerUse(0d)
-      if (worldObj.blockExists(other.xCoord, other.yCoord, other.zCoord)) {
-        worldObj.setBlockMetadataWithNotify(
-          other.xCoord,
-          other.yCoord,
-          other.zCoord,
-          0,
-          3
-        )
-        connectionMap.remove(other)
-        other.connectionMap.remove(this)
-      }
-    }
-    setIdlePowerUse(0d)
-    if (worldObj.blockExists(xCoord, yCoord, zCoord))
-      worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 0, 3)
+    breakAllConnection()
   }
 
   override def getDrops(

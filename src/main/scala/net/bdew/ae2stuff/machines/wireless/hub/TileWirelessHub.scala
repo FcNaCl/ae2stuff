@@ -13,32 +13,17 @@ class TileWirelessHub extends TileWirelessBase {
 
   val maxConnections = 32
 
-  var hubPowerUsage = 0d
-
-  def setHubPowerUse(power: Double): Unit = {
-    hubPowerUsage += power
-    this.setIdlePowerUse(hubPowerUsage)
+  override def doLink(other: TileWirelessBase): Boolean = {
+    if (!other.canAddLink && !canAddLink) return false
+    this.customName = other.customName
+    setupConnection(other)
   }
 
-  def getHubChannels: Int = {
-    var channels = 0
-    getAllConnection foreach { that =>
-      channels += that.getUsedChannels
-    }
-    channels
+  override def doUnlink(): Unit = {
+    breakAllConnection()
   }
 
-  override def canAddLink: Boolean = ???
-
-  override def doLink(other: TileWirelessBase): Boolean = ???
-
-  override def doUnlink(): Unit = ???
-
-  override def getMachineRepresentation: ItemStack = ???
-
-  override def getActionableNode: IGridNode = ???
-
-  override def getColor: AEColor = ???
+  override def doUnlink(other: TileWirelessBase): Unit = breakConnection(other)
 
   override def getDrops(
       world: World,
@@ -49,7 +34,7 @@ class TileWirelessHub extends TileWirelessBase {
       fortune: Int,
       drops: util.ArrayList[ItemStack]
   ): util.ArrayList[ItemStack] = {
-    val stack = new ItemStack(BlockWireless)
+    val stack = new ItemStack(BlockWirelessHub)
     if (this.color != AEColor.Transparent) {
       stack.setItemDamage(this.color.ordinal() + 18)
     } else {
@@ -60,4 +45,5 @@ class TileWirelessHub extends TileWirelessBase {
   }
 
   override def getAvailableConnections: Int = ???
+
 }

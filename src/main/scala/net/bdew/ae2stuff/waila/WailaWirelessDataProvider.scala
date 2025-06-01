@@ -18,8 +18,10 @@ import net.bdew.lib.nbt.NBT
 import net.bdew.lib.{DecFormat, Misc}
 import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
-import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.{NBTTagCompound, NBTTagList}
 import net.minecraft.world.World
+
+import scala.collection.mutable.ListBuffer
 
 object WailaWirelessDataProvider
     extends BaseDataProvider(classOf[TileWirelessBase]) {
@@ -32,34 +34,26 @@ object WailaWirelessDataProvider
       y: Int,
       z: Int
   ): NBTTagCompound = {
-    if (te.isLinked) {
-      val pos = Option(
-        te.getConnectedTiles.map(link => NBT.from(link.writeToNBT _))
-      ).getOrElse(Set.empty[NBTTagCompound])
+    val tagList = new NBTTagList
+    te.getConnectedTiles foreach (blockRef =>
+      tagList.appendTag(
+        Misc.applyMutator(blockRef.myPos.writeToNBT, new NBTTagCompound)
+      )
+    )
 
-      val data = NBT(
-        "connected" -> true,
-        "target" -> pos,
-        "channels" -> (if (te.isLinked)
-                         te.getUsedChannels
-                       else 0),
-        "power" -> PowerMultiplier.CONFIG.multiply(te.getIdlePowerUsage),
-        "color" -> te.color.ordinal()
-      )
-      if (te.hasCustomName) {
-        data.setString("name", te.customName)
-      }
-      tag.setTag("wireless_waila", data)
-    } else {
-      val data = NBT(
-        "connected" -> false,
-        "color" -> te.color.ordinal()
-      )
-      if (te.hasCustomName) {
-        data.setString("name", te.customName)
-      }
-      tag.setTag("wireless_waila", data)
+    val data = NBT(
+      "connected" -> te.isLinked,
+      "targets" -> tagList,
+      "channels" -> te.getUsedChannels,
+      "power" -> te.getIdlePowerUsage,
+      "color" -> te.color.ordinal(),
+      "isSneaking" -> player.isSneaking
+    )
+
+    if (te.hasCustomName) {
+      data.setString("name", te.customName)
     }
+    tag.setTag("wireless_waila", data)
     tag
   }
 
@@ -69,60 +63,76 @@ object WailaWirelessDataProvider
       acc: IWailaDataAccessor,
       cfg: IWailaConfigHandler
   ): Iterable[String] = {
-    if (acc.getNBTData.hasKey("wireless_waila")) {
-      val data = acc.getNBTData.getCompoundTag("wireless_waila")
-      val name = if (data.hasKey("name")) data.getString("name") else null
-      val color = data.getInteger("color")
-      if (data.getBoolean("connected")) {
-        val pos = BlockRef.fromNBT(data.getCompoundTag("target"))
-        List(
-          Misc
-            .toLocalF("ae2stuff.waila.wireless.connected", pos.x, pos.y, pos.z),
-          Misc.toLocalF(
-            "ae2stuff.waila.wireless.channels",
-            data.getInteger("channels")
-          ),
-          Misc.toLocalF(
-            "ae2stuff.waila.wireless.power",
-            DecFormat.short(data.getDouble("power"))
-          )
+    if (!acc.getNBTData.hasKey("wireless_waila")) return List.empty[String]
+
+    val data = acc.getNBTData.getCompoundTag("wireless_waila")
+    val name = Option(data.getString("name")).getOrElse("")
+    val color = data.getInteger("color")
+
+    val pos = data.getTag("targets") match {
+      case tagList: NBTTagList =>
+        (for (i <- 0 until tagList.tagCount()) yield {
+          tagList.getCompoundTagAt(i) match {
+            case a: NBTTagCompound =>
+              BlockRef.fromNBT(a)
+            case _ =>
+              null
+          }
+        }).filterNot(_ == null).toSet
+      case _ => Set.empty[BlockRef]
+    }
+
+    val lines = ListBuffer.empty[String]
+
+    if (data.getBoolean("isSneaking")) {
+      lines += Misc.toLocalF("ae2stuff.waila.wireless.connected.details.title")
+
+      pos.foreach(singlePos =>
+        lines += Misc.toLocalF(
+          "ae2stuff.waila.wireless.connected.details",
+          singlePos.x,
+          singlePos.y,
+          singlePos.z
         )
-          .++(if (name != null) {
-            Misc.toLocalF("ae2stuff.waila.wireless.name", name) :: Nil
-          } else Nil)
-          .++(if (color != AEColor.Transparent.ordinal()) {
-            Misc.toLocal(AEColor.values().apply(color).unlocalizedName) :: Nil
-          } else Nil)
-      } else {
-        List(Misc.toLocal("ae2stuff.waila.wireless.notconnected"))
-          .++(if (name != null) {
-            Misc.toLocalF("ae2stuff.waila.wireless.name", name) :: Nil
-          } else Nil)
-          .++(if (color != AEColor.Transparent.ordinal()) {
-            Misc.toLocal(AEColor.values().apply(color).unlocalizedName) :: Nil
-          } else Nil)
-      }
-    } else if (acc.getNBTData.hasKey("wirelesshub_waila")) {
-      val data = acc.getNBTData.getCompoundTag("wirelesshub_waila")
-      val name = if (data.hasKey("name")) data.getString("name") else null
-      val color = data.getInteger("color")
-      List(
-        Misc.toLocalF("tile.ae2stuff.WirelessHub.name"),
+      )
+      return lines.toList
+    }
+
+    lines += (pos.size match {
+      case 0 => Misc.toLocal("ae2stuff.waila.wireless.notconnected")
+      case 1 =>
+        val singlePos = pos.head
+        Misc.toLocalF(
+          "ae2stuff.waila.wireless.connected",
+          singlePos.x,
+          singlePos.y,
+          singlePos.z
+        )
+      case _ =>
+        Misc.toLocalF(
+          "ae2stuff.waila.wireless.connected.multiple",
+          pos.size
+        )
+
+    })
+
+    if (data.getBoolean("connected")) {
+      lines +=
         Misc.toLocalF(
           "ae2stuff.waila.wireless.channels",
           data.getInteger("channels")
-        ),
-        Misc.toLocalF(
-          "ae2stuff.waila.wireless.power",
-          DecFormat.short(data.getDouble("power"))
         )
-      )
-        .++(if (name != null) {
-          Misc.toLocalF("ae2stuff.waila.wireless.name", name) :: Nil
-        } else Nil)
-        .++(if (color != AEColor.Transparent.ordinal()) {
-          Misc.toLocal(AEColor.values().apply(color).unlocalizedName) :: Nil
-        } else Nil)
-    } else List.empty
+    }
+
+    lines += Misc.toLocalF(
+      "ae2stuff.waila.wireless.power",
+      DecFormat.short(data.getDouble("power"))
+    )
+
+    if (color != AEColor.Transparent.ordinal()) {
+      lines += Misc.toLocal(AEColor.values().apply(color).unlocalizedName)
+    }
+
+    lines.toList
   }
 }

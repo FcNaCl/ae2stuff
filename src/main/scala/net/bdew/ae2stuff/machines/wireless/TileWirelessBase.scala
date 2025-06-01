@@ -1,12 +1,19 @@
 package net.bdew.ae2stuff.machines.wireless
 
+import appeng.api.AEApi
+import appeng.api.config.PowerMultiplier
 import appeng.api.implementations.tiles.IColorableTile
-import appeng.api.networking.{IGridConnection, IGridNode}
+import appeng.api.networking.{GridFlags, IGridConnection, IGridNode}
 import appeng.api.networking.security.IActionHost
 import appeng.api.util.AEColor
 import appeng.helpers.ICustomNameObject
+import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.{GridTile, VariableIdlePower}
-import net.bdew.ae2stuff.machines.wireless.simple.BlockWireless
+import net.bdew.ae2stuff.machines.wireless.hub.{
+  BlockWirelessHub,
+  TileWirelessHub
+}
+import net.bdew.ae2stuff.machines.wireless.simple.{BlockWireless, TileWireless}
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.data.base.{DataSlotVal, TileDataSlots, UpdateKind}
 import net.minecraft.block.Block
@@ -19,8 +26,9 @@ import net.minecraftforge.common.util.ForgeDirection
 import java.util
 import scala.collection.mutable
 import scala.collection.immutable
+import scala.util.Failure
 
-abstract class TileWirelessBase
+abstract class TileWirelessBase()
     extends TileDataSlots
     with GridTile
     with IActionHost
@@ -28,7 +36,36 @@ abstract class TileWirelessBase
     with ICustomNameObject
     with IColorableTile {
 
-  protected val cfg: MachineWireless.type = MachineWireless
+  serverTick.listen(() => {
+    getConnectedTiles.foreach(other => {
+      connections.get(other) match {
+        case Some(connection) =>
+        case None if (other.canAddLink) =>
+          try {
+            doLink(other)
+          } catch {
+            case t: Throwable =>
+              AE2Stuff.logWarnException(
+                "Failed setting up wireless link %s <-> %s: %s",
+                t,
+                myPos,
+                other,
+                t.getMessage
+              )
+              doUnlink()
+          }
+        case None =>
+      }
+    })
+  })
+
+  protected val cfg: MachineWireless[_ <: Block] = MachinesWirelessRegister
+    .get(this)
+    .getOrElse(
+      throw new IllegalStateException(
+        s"Unknown wireless block type for ${getClass.getName} wireless tile"
+      )
+    )
 
   var customName: String = ""
 
@@ -36,28 +73,57 @@ abstract class TileWirelessBase
 
   lazy val myPos: BlockRef = BlockRef.fromTile(this)
 
-  def canAddLink: Boolean
+  val block: BlockWirelessBase[TileWirelessBase] = this match {
+    case _: TileWireless =>
+      BlockWireless.asInstanceOf[BlockWirelessBase[TileWirelessBase]]
+    case _: TileWirelessHub =>
+      BlockWirelessHub.asInstanceOf[BlockWirelessBase[TileWirelessBase]]
+    case _ =>
+      AE2Stuff.logWarn(
+        "TileWirelessBase %s is not a BlockWirelessBase, this is a bug",
+        this
+      )
+      throw new IllegalStateException(
+        "un supported TileWirelessBase type: " + this.getClass.getName
+      )
+  }
+
+  override def getFlags: util.EnumSet[GridFlags] =
+    util.EnumSet.of(GridFlags.DENSE_CAPACITY)
 
   val maxConnections: Int
 
+  private val connectedTarget: WirelessDataSlot =
+    WirelessDataSlot("connectedTarget", this)
 
-  private val connectedTarget: WirelessDataSlot = WirelessDataSlot("connectedTarget", this)
-  //private val connectedTarget = List.empty[TileWirelessBase]
-  private val connections = List.empty[IGridConnection]
+  // server-side only, contains the connections to other wireless tiles
+  private var connections =
+    mutable.HashMap.empty[TileWirelessBase, IGridConnection]
 
-  def getConnectedTiles: immutable.List[TileWirelessBase] = connectedTarget.filter(_.getTile[TileWirelessBase](worldObj).nonEmpty).map(_.get)
-  def getAllConnection: immutable.List[IGridConnection] = connections
+  def getConnectedTiles: Set[TileWirelessBase] =
+    connectedTarget.flatMap(_.getTile[TileWirelessBase](worldObj))
+
+  def getAllConnections: Set[IGridConnection] = connections.values.toSet
+
+  def getTileAndConnections
+      : immutable.HashMap[TileWirelessBase, IGridConnection] =
+    immutable.HashMap(connections.toSeq: _*)
 
   def isConnectedTo(other: TileWirelessBase): Boolean =
-    connectedTarget.contains(other) && other.connectedTarget.contains(this)
+    connectedTarget.exists(_ == other.myPos) && other.connectedTarget.exists(
+      _ == myPos
+    )
 
   def isLinked: Boolean = connectedTarget.nonEmpty
 
   def isHub: Boolean = maxConnections > 1
 
-  def getAvailableConnections: Int
+  def getAvailableConnections: Int =
+    maxConnections - connections.size
 
-  def getUsedChannels: Int = getAllConnection.map(_.getUsedChannels).sum
+  def canAddLink: Boolean = getAvailableConnections > 0
+
+  def getUsedChannels: Int = getAllConnections.map(_.getUsedChannels).sum
 
   def doLink(other: TileWirelessBase): Boolean
 
@@ -108,8 +174,97 @@ abstract class TileWirelessBase
   }
 
   override def getMachineRepresentation: ItemStack = new ItemStack(
-    BlockWireless
+    block
   )
+
+  protected def setupConnection(other: TileWirelessBase): Boolean = {
+    val connection = Option(
+      AEApi.instance().createGridConnection(this.getNode, other.getNode)
+    ).getOrElse(return false)
+
+    connectedTarget.value = connectedTarget.value + other.myPos
+    other.connectedTarget.value = other.connectedTarget.value + myPos
+
+    connections.put(other, connection)
+    other.connections.put(this, connection)
+
+    this.computeEnergyUsage()
+
+    other.computeEnergyUsage()
+
+    if (worldObj.blockExists(xCoord, yCoord, zCoord))
+      worldObj.setBlockMetadataWithNotify(
+        this.xCoord,
+        this.yCoord,
+        this.zCoord,
+        1,
+        3
+      )
+    if (worldObj.blockExists(other.xCoord, other.yCoord, other.zCoord)) {
+      worldObj.setBlockMetadataWithNotify(
+        other.xCoord,
+        other.yCoord,
+        other.zCoord,
+        1,
+        3
+      )
+    }
+    true
+  }
+
+  protected def breakConnection(other: TileWirelessBase): Unit = {
+    connections.get(other) match {
+      case Some(connection) =>
+        connection.destroy()
+      case None =>
+        return
+    }
+
+    connectedTarget.value = connectedTarget.value - other.myPos
+    other.connectedTarget.value = other.connectedTarget.value - myPos
+
+    connections.remove(other)
+    other.connections.remove(this)
+
+    other.computeEnergyUsage()
+    if (worldObj.blockExists(other.xCoord, other.yCoord, other.zCoord)) {
+      worldObj.setBlockMetadataWithNotify(
+        other.xCoord,
+        other.yCoord,
+        other.zCoord,
+        0,
+        3
+      )
+      connections.remove(other)
+      other.connections.remove(other)
+    }
+    this.computeEnergyUsage()
+    if (worldObj.blockExists(xCoord, yCoord, zCoord))
+      worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 0, 3)
+  }
+
+  protected def breakAllConnection(): Unit = {
+    getConnectedTiles.foreach(breakConnection(_))
+  }
+
+  def computeEnergyUsage(): Unit = {
+    this.setIdlePowerUse(
+      PowerMultiplier.CONFIG.multiply( // apply config multiplier of AE2
+        getConnectedTiles
+          .map(tile => {
+            val dx = this.xCoord - tile.xCoord
+            val dy = this.yCoord - tile.yCoord
+            val dz = this.zCoord - tile.zCoord
+            // val power = cfg.powerBase + cfg.powerDistanceMultiplier * (dx * dx + dy * dy + dz * dz)
+            val dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+            cfg.powerBase + cfg.powerDistanceMultiplier * dist * math.log(
+              dist * dist + 3
+            )
+          })
+          .sum
+      )
+    )
+  }
 
   override def recolourBlock(
       side: ForgeDirection,

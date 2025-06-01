@@ -79,7 +79,9 @@ object AdvWirelessKit
     *   The determined ForgeDirection representing the player's look direction,
     *   which could be ForgeDirection.EAST, WEST, UP, DOWN, NORTH, or SOUTH.
     */
-  private def FindPlayerLookVectorDirection(player: EntityPlayer): ForgeDirection = {
+  private def FindPlayerLookVectorDirection(
+      player: EntityPlayer
+  ): ForgeDirection = {
     val view: Vec3 = player.getLookVec()
     val absX = Math.abs(view.xCoord)
     val absY = Math.abs(view.yCoord)
@@ -357,7 +359,6 @@ object AdvWirelessKit
     }
 
     val pos = BlockRef(x, y, z)
-    if (!pos.blockIs(world, BlockWireless)) return false
     val tile: TileWirelessBase = pos.getTile[TileWirelessBase](world).get
     if (tile == null) return false
     val pid = Security.getPlayerId(player)

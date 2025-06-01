@@ -30,10 +30,9 @@ object WirelessOverlayRender extends WorldOverlayRenderer {
     val pos = BlockRef(mop.blockX, mop.blockY, mop.blockZ)
     for {
       tile <- pos.getTile[TileWirelessBase](Client.world)
-      if (!tile.isLinked)
+      if (tile.isLinked)
     } {
       tile.getConnectedTiles.foreach(other => {
-
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT)
 
         GL11.glDisable(GL11.GL_LIGHTING)

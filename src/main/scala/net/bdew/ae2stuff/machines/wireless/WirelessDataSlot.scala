@@ -5,19 +5,20 @@ import net.bdew.lib.Misc
 import net.bdew.lib.block.BlockRef
 import net.minecraft.nbt.{NBTTagCompound, NBTTagList}
 
-import scala.collection.mutable
+case class WirelessDataSlot(name: String, parent: DataSlotContainer)
+    extends DataSlotVal[Set[BlockRef]] {
 
-case class WirelessDataSlot(name: String, parent: DataSlotContainer) extends  DataSlotVal [List[BlockRef]] {
-
-  override var value: List[BlockRef] = List[BlockRef]()
+  override var value: Set[BlockRef] = Set[BlockRef]()
 
   setUpdate(UpdateKind.SAVE, UpdateKind.WORLD)
 
   def save(tag: NBTTagCompound, kind: UpdateKind.Value): Unit = {
     val tagList = new NBTTagList
     value foreach (blockRef =>
-      tagList.appendTag(Misc.applyMutator(blockRef.writeToNBT, new NBTTagCompound))
+      tagList.appendTag(
+        Misc.applyMutator(blockRef.writeToNBT, new NBTTagCompound)
       )
+    )
     tag.setTag(name, tagList)
   }
 
@@ -31,8 +32,8 @@ case class WirelessDataSlot(name: String, parent: DataSlotContainer) extends  Da
             case _ =>
               null
           }
-        }).filterNot(_ == null).toList
-      case _ => List.empty[BlockRef]
+        }).filterNot(_ == null).toSet
+      case _ => Set.empty[BlockRef]
     }
   }
 }

@@ -12,7 +12,7 @@ package net.bdew.ae2stuff
 import net.bdew.ae2stuff.machines.encoder.MachineEncoder
 import net.bdew.ae2stuff.machines.grower.MachineGrower
 import net.bdew.ae2stuff.machines.inscriber.MachineInscriber
-import net.bdew.ae2stuff.machines.wireless.MachineWireless
+import net.bdew.ae2stuff.machines.wireless.MachinesWirelessRegister
 import net.bdew.lib.config.MachineManager
 
 object Machines
@@ -24,5 +24,7 @@ object Machines
   registerMachine(MachineEncoder)
   registerMachine(MachineGrower)
   registerMachine(MachineInscriber)
-  registerMachine(MachineWireless)
+  MachinesWirelessRegister.getAllMachines.foreach { machine =>
+    registerMachine(machine)
+  }
 }
