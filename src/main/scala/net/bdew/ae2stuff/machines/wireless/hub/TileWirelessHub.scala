@@ -43,7 +43,4 @@ class TileWirelessHub extends TileWirelessBase {
     drops.add(stack)
     drops
   }
-
-  override def getAvailableConnections: Int = ???
-
 }

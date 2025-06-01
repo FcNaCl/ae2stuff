@@ -20,8 +20,8 @@ object Items extends ItemManager(CreativeTabs.main) {
       regItem(ItemWirelessKit)
       regItem(AdvWirelessKit)
       true
-    }
-    false
+    } else
+      false
   }
   regItem(ItemVisualiser)
 }

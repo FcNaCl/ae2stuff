@@ -28,9 +28,6 @@ object WirelessKitHelper {
       player: EntityPlayer,
       pid: Integer
   ): Boolean = {
-    // Player can modify both sides - unlink current connections if any
-    if (!src.isHub) src.doUnlink()
-    if (!src.isHub) dst.doUnlink()
 
     // Make player the owner of both blocks
     src.getNode.setPlayerID(pid)

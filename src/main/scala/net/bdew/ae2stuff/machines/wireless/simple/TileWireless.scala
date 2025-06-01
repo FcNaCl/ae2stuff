@@ -25,6 +25,7 @@ class TileWireless extends TileWirelessBase {
   override val maxConnections = 1
 
   override def doLink(other: TileWirelessBase): Boolean = {
+    if (!other.canAddLink) return false
     doUnlink()
     this.customName = other.customName
     setupConnection(other)
@@ -33,6 +34,8 @@ class TileWireless extends TileWirelessBase {
   def doUnlink(): Unit = {
     breakAllConnection()
   }
+
+  override def canAddLink: Boolean = true
 
   override def getDrops(
       world: World,

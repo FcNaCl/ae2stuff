@@ -9,13 +9,11 @@ import appeng.api.util.AEColor
 import appeng.helpers.ICustomNameObject
 import net.bdew.ae2stuff.AE2Stuff
 import net.bdew.ae2stuff.grid.{GridTile, VariableIdlePower}
-import net.bdew.ae2stuff.machines.wireless.hub.{
-  BlockWirelessHub,
-  TileWirelessHub
-}
+import net.bdew.ae2stuff.machines.wireless.hub.{BlockWirelessHub, TileWirelessHub}
 import net.bdew.ae2stuff.machines.wireless.simple.{BlockWireless, TileWireless}
 import net.bdew.lib.block.BlockRef
 import net.bdew.lib.data.base.{DataSlotVal, TileDataSlots, UpdateKind}
+import net.bdew.lib.multiblock.data.DataSlotPos
 import net.minecraft.block.Block
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
@@ -24,6 +22,7 @@ import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 
 import java.util
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.mutable
 import scala.collection.immutable
 import scala.util.Failure
@@ -59,6 +58,10 @@ abstract class TileWirelessBase()
     })
   })
 
+  val link =
+    DataSlotPos("link", this).setUpdate(UpdateKind.SAVE, UpdateKind.WORLD)
+
+
   protected val cfg: MachineWireless[_ <: Block] = MachinesWirelessRegister
     .get(this)
     .getOrElse(
@@ -93,15 +96,15 @@ abstract class TileWirelessBase()
 
   val maxConnections: Int
 
-  private val connectedTarget: WirelessDataSlot =
-    WirelessDataSlot("connectedTarget", this)
+  private val connectedTargets: WirelessDataSlot =
+    WirelessDataSlot("connectedTarget", this).setUpdate(UpdateKind.SAVE, UpdateKind.WORLD)
 
   // server-side only, contains the connections to other wireless tiles
   private var connections =
     mutable.HashMap.empty[TileWirelessBase, IGridConnection]
 
   def getConnectedTiles: Set[TileWirelessBase] =
-    connectedTarget.flatMap(_.getTile[TileWirelessBase](worldObj))
+    connectedTargets.flatMap(_.getTile[TileWirelessBase](worldObj))
 
   def getAllConnections: Set[IGridConnection] = connections.values.toSet
 
@@ -110,11 +113,11 @@ abstract class TileWirelessBase()
     immutable.HashMap(connections.toSeq: _*)
 
   def isConnectedTo(other: TileWirelessBase): Boolean =
-    connectedTarget.exists(_ == other.myPos) && other.connectedTarget.exists(
+    connectedTargets.exists(_ == other.myPos) && other.connectedTargets.exists(
       _ == myPos
     )
 
-  def isLinked: Boolean = connectedTarget.nonEmpty
+  def isLinked: Boolean = connectedTargets.nonEmpty
 
   def isHub: Boolean = maxConnections > 1
 
@@ -123,7 +126,17 @@ abstract class TileWirelessBase()
 
   def canAddLink: Boolean = getAvailableConnections > 0
 
-  def getUsedChannels: Int = getAllConnections.map(_.getUsedChannels).sum
+  def getUsedChannels: Int = {
+    var channels = 0
+    getGridNode(ForgeDirection.UNKNOWN).getConnections.asScala.foreach {
+      connection =>
+        channels = math.max(
+          channels,
+          connection.getUsedChannels
+        )
+    }
+    channels
+  }
 
   def doLink(other: TileWirelessBase): Boolean
 
@@ -182,8 +195,8 @@ abstract class TileWirelessBase()
       AEApi.instance().createGridConnection(this.getNode, other.getNode)
     ).getOrElse(return false)
 
-    connectedTarget.value = connectedTarget.value + other.myPos
-    other.connectedTarget.value = other.connectedTarget.value + myPos
+    connectedTargets.value = connectedTargets.value + other.myPos
+    other.connectedTargets.value = other.connectedTargets.value + myPos
 
     connections.put(other, connection)
     other.connections.put(this, connection)
@@ -192,7 +205,7 @@ abstract class TileWirelessBase()
 
     other.computeEnergyUsage()
 
-    if (worldObj.blockExists(xCoord, yCoord, zCoord))
+    if (worldObj.blockExists(xCoord, yCoord, zCoord)) {
       worldObj.setBlockMetadataWithNotify(
         this.xCoord,
         this.yCoord,
@@ -200,6 +213,7 @@ abstract class TileWirelessBase()
         1,
         3
       )
+    }
     if (worldObj.blockExists(other.xCoord, other.yCoord, other.zCoord)) {
       worldObj.setBlockMetadataWithNotify(
         other.xCoord,
@@ -209,6 +223,9 @@ abstract class TileWirelessBase()
         3
       )
     }
+
+    dataSlotChanged(connectedTargets)
+    other.dataSlotChanged(other.connectedTargets)
     true
   }
 
@@ -220,8 +237,8 @@ abstract class TileWirelessBase()
         return
     }
 
-    connectedTarget.value = connectedTarget.value - other.myPos
-    other.connectedTarget.value = other.connectedTarget.value - myPos
+    connectedTargets.value = connectedTargets.value - other.myPos
+    other.connectedTargets.value = other.connectedTargets.value - myPos
 
     connections.remove(other)
     other.connections.remove(this)

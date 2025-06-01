@@ -206,23 +206,7 @@ class ItemBlockWireless(b: Block) extends ItemBlockTooltip(b) {
   ): Unit = {
     super.addInformation(stack, player, list, advanced)
     val itemDamage = stack.getItemDamage
-    if (itemDamage == 17) {
-      list
-        .asInstanceOf[util.List[String]]
-        .add(Misc.toLocal("tile.ae2stuff.WirelessHub.name"))
-      list
-        .asInstanceOf[util.List[String]]
-        .add(Misc.toLocal(AEColor.values().apply(16).unlocalizedName))
-    } else if (itemDamage > 16) {
-      list
-        .asInstanceOf[util.List[String]]
-        .add(Misc.toLocal("tile.ae2stuff.WirelessHub.name"))
-      list
-        .asInstanceOf[util.List[String]]
-        .add(
-          Misc.toLocal(AEColor.values().apply(itemDamage - 18).unlocalizedName)
-        )
-    } else if (itemDamage > 0) {
+    if (itemDamage > 0) {
       list
         .asInstanceOf[util.List[String]]
         .add(
